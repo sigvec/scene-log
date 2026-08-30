@@ -1,15 +1,33 @@
 import { StatusBar } from "expo-status-bar";
+import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import type { Observation } from "./src/domain/observation/Observation";
 import { createObservation } from "./src/domain/observation/createObservation";
 
 export default function App() {
   const [observations, setObservations] = useState<Observation[]>([]);
+  const [capturedImageUri, setCapturedImageUri] = useState<string | null>(null);
 
-  function handleNewObservation() {
+  async function handleNewObservation() {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+
+    if (!permission.granted) {
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ["images"],
+      quality: 1,
+    });
+
+    if (result.canceled) {
+      return;
+    }
+
+    setCapturedImageUri(result.assets[0].uri);
+
     const observation = createObservation();
-
     setObservations((current) => [...current, observation]);
   }
 
@@ -20,6 +38,10 @@ export default function App() {
       <Pressable style={styles.button} onPress={handleNewObservation}>
         <Text style={styles.buttonText}>New Observation</Text>
       </Pressable>
+
+      {capturedImageUri && (
+        <Image source={{ uri: capturedImageUri }} style={styles.image} />
+      )}
 
       <View style={styles.observations}>
         <Text style={styles.sectionTitle}>Observations</Text>
@@ -59,6 +81,12 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "500",
+  },
+  image: {
+    width: "100%",
+    height: 300,
+    marginTop: 32,
+    borderRadius: 8,
   },
   observations: {
     marginTop: 48,
