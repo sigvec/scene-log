@@ -8,5 +8,6 @@ export function createObservation(): Observation {
   return {
     id: generateId(),
     createdAt: new Date(),
+    captures: [],
   };
 }
