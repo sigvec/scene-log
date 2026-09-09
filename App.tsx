@@ -7,9 +7,17 @@ import { createObservation } from "./src/domain/observation/createObservation";
 
 export default function App() {
   const [observations, setObservations] = useState<Observation[]>([]);
+  const [activeObservation, setActiveObservation] =
+    useState<Observation | null>(null);
   const [capturedImageUri, setCapturedImageUri] = useState<string | null>(null);
 
   async function handleNewObservation() {
+    const observation = createObservation();
+
+    setObservations((current) => [...current, observation]);
+    setActiveObservation(observation);
+    setCapturedImageUri(null);
+
     const permission = await ImagePicker.requestCameraPermissionsAsync();
 
     if (!permission.granted) {
@@ -26,9 +34,6 @@ export default function App() {
     }
 
     setCapturedImageUri(result.assets[0].uri);
-
-    const observation = createObservation();
-    setObservations((current) => [...current, observation]);
   }
 
   return (
@@ -39,19 +44,37 @@ export default function App() {
         <Text style={styles.buttonText}>New Observation</Text>
       </Pressable>
 
-      {capturedImageUri && (
-        <Image source={{ uri: capturedImageUri }} style={styles.image} />
+      {activeObservation && (
+        <View style={styles.activeObservation}>
+          <Text style={styles.sectionTitle}>Observation</Text>
+
+          <Text style={styles.timestamp}>
+            {activeObservation.createdAt.toLocaleTimeString()}
+          </Text>
+
+          {capturedImageUri && (
+            <Image source={{ uri: capturedImageUri }} style={styles.image} />
+          )}
+
+          <Text style={styles.captureStatus}>
+            {activeObservation.captures.length === 0
+              ? "No measurements recorded"
+              : `${activeObservation.captures.length} measurement(s)`}
+          </Text>
+        </View>
       )}
 
-      <View style={styles.observations}>
-        <Text style={styles.sectionTitle}>Observations</Text>
+      {!activeObservation && (
+        <View style={styles.observations}>
+          <Text style={styles.sectionTitle}>Observations</Text>
 
-        {observations.map((observation) => (
-          <Text key={observation.id} style={styles.observation}>
-            {observation.createdAt.toLocaleTimeString()}
-          </Text>
-        ))}
-      </View>
+          {observations.map((observation) => (
+            <Text key={observation.id} style={styles.observation}>
+              {observation.createdAt.toLocaleTimeString()}
+            </Text>
+          ))}
+        </View>
+      )}
 
       <StatusBar style="auto" />
     </View>
@@ -82,19 +105,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "500",
   },
-  image: {
-    width: "100%",
-    height: 300,
-    marginTop: 32,
-    borderRadius: 8,
-  },
-  observations: {
-    marginTop: 48,
+  activeObservation: {
+    marginTop: 40,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: "600",
-    marginBottom: 16,
+    marginBottom: 8,
+  },
+  timestamp: {
+    fontSize: 14,
+    color: "#666",
+  },
+  image: {
+    width: "100%",
+    height: 300,
+    marginTop: 24,
+    borderRadius: 8,
+  },
+  captureStatus: {
+    marginTop: 16,
+    fontSize: 16,
+  },
+  observations: {
+    marginTop: 48,
   },
   observation: {
     fontSize: 16,
