@@ -1,7 +1,16 @@
 import { StatusBar } from "expo-status-bar";
 import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Image,
+  KeyboardAvoidingView,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import type { Observation } from "./src/domain/observation/Observation";
 import { createObservation } from "./src/domain/observation/createObservation";
 import type { TextRegion } from "./src/services/ocr/TextRegion";
@@ -60,16 +69,23 @@ export default function App() {
   const [selectedRegionIndex, setSelectedRegionIndex] = useState<number | null>(
     null,
   );
+  const [editedValue, setEditedValue] = useState("");
 
   function handleSaveValue() {
-    if (!activeObservation || selectedNumericValue === null) {
+    if (!activeObservation) {
+      return;
+    }
+
+    const value = Number(editedValue);
+
+    if (!Number.isFinite(value)) {
       return;
     }
 
     const capture = createCapture([
       {
         fieldId: BUILT_IN_FIELD_IDS.value,
-        value: selectedNumericValue,
+        value,
       },
     ]);
 
@@ -89,6 +105,7 @@ export default function App() {
     );
 
     setSelectedRegionIndex(null);
+    setEditedValue("");
   }
 
   async function handleNewObservation() {
@@ -138,113 +155,124 @@ export default function App() {
     : null;
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>SceneLog</Text>
+    <KeyboardAvoidingView style={styles.container} behavior="height">
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Text style={styles.title}>SceneLog</Text>
 
-      <Pressable style={styles.button} onPress={handleNewObservation}>
-        <Text style={styles.buttonText}>New Observation</Text>
-      </Pressable>
+        <Pressable style={styles.button} onPress={handleNewObservation}>
+          <Text style={styles.buttonText}>New Observation</Text>
+        </Pressable>
 
-      {activeObservation && (
-        <View style={styles.activeObservation}>
-          <Text style={styles.sectionTitle}>Observation</Text>
+        {activeObservation && (
+          <View style={styles.activeObservation}>
+            <Text style={styles.sectionTitle}>Observation</Text>
 
-          <Text style={styles.timestamp}>
-            {activeObservation.createdAt.toLocaleTimeString()}
-          </Text>
+            <Text style={styles.timestamp}>
+              {activeObservation.createdAt.toLocaleTimeString()}
+            </Text>
 
-          {capturedImageUri && imageSize && (
-            <View
-              style={styles.imageContainer}
-              onLayout={(event) => {
-                const { width, height } = event.nativeEvent.layout;
+            {capturedImageUri && imageSize && (
+              <View
+                style={styles.imageContainer}
+                onLayout={(event) => {
+                  const { width, height } = event.nativeEvent.layout;
 
-                setContainerSize({ width, height });
-              }}
-            >
-              <Image
-                source={{ uri: capturedImageUri }}
-                style={styles.image}
-                resizeMode="contain"
-              />
+                  setContainerSize({ width, height });
+                }}
+              >
+                <Image
+                  source={{ uri: capturedImageUri }}
+                  style={styles.image}
+                  resizeMode="contain"
+                />
 
-              {containerSize &&
-                textRegions.map((region, index) => {
-                  const transform = getContainTransform(
-                    imageSize.width,
-                    imageSize.height,
-                    containerSize.width,
-                    containerSize.height,
-                  );
+                {containerSize &&
+                  textRegions.map((region, index) => {
+                    const transform = getContainTransform(
+                      imageSize.width,
+                      imageSize.height,
+                      containerSize.width,
+                      containerSize.height,
+                    );
 
-                  return (
-                    <Pressable
-                      key={`${region.text}-${index}`}
-                      onPress={() => setSelectedRegionIndex(index)}
-                      style={[
-                        styles.textRegion,
-                        selectedRegionIndex === index &&
-                          styles.selectedTextRegion,
-                        {
-                          left:
-                            transform.offsetX +
-                            region.bounds.x * transform.scale,
-                          top:
-                            transform.offsetY +
-                            region.bounds.y * transform.scale,
-                          width: region.bounds.width * transform.scale,
-                          height: region.bounds.height * transform.scale,
-                        },
-                      ]}
-                    />
-                  );
-                })}
-            </View>
-          )}
+                    return (
+                      <Pressable
+                        key={`${region.text}-${index}`}
+                        onPress={() => {
+                          setSelectedRegionIndex(index);
+                          setEditedValue(
+                            parseNumericValue(region.text)?.toString() ?? "",
+                          );
+                        }}
+                        style={[
+                          styles.textRegion,
+                          selectedRegionIndex === index &&
+                            styles.selectedTextRegion,
+                          {
+                            left:
+                              transform.offsetX +
+                              region.bounds.x * transform.scale,
+                            top:
+                              transform.offsetY +
+                              region.bounds.y * transform.scale,
+                            width: region.bounds.width * transform.scale,
+                            height: region.bounds.height * transform.scale,
+                          },
+                        ]}
+                      />
+                    );
+                  })}
+              </View>
+            )}
 
-          {selectedRegion && (
-            <View style={styles.selectedValue}>
-              <Text style={styles.selectedValueLabel}>Selected value</Text>
+            {selectedRegion && (
+              <View style={styles.selectedValue}>
+                <Text style={styles.selectedValueLabel}>Selected value</Text>
 
-              <Text style={styles.selectedValueText}>
-                {selectedRegion.text}
-              </Text>
-
-              {selectedNumericValue !== null && (
-                <Text style={styles.parsedValue}>
-                  Numeric value: {selectedNumericValue}
+                <Text style={styles.selectedValueText}>
+                  {selectedRegion.text}
                 </Text>
-              )}
-              {selectedNumericValue !== null && (
+
+                <TextInput
+                  value={editedValue}
+                  onChangeText={setEditedValue}
+                  keyboardType="decimal-pad"
+                  style={styles.valueInput}
+                  selectTextOnFocus
+                />
+
                 <Pressable style={styles.saveButton} onPress={handleSaveValue}>
                   <Text style={styles.saveButtonText}>Save Value</Text>
                 </Pressable>
-              )}
-            </View>
-          )}
+              </View>
+            )}
 
-          <Text style={styles.captureStatus}>
-            {activeObservation.captures.length === 0
-              ? "No measurements recorded"
-              : `${activeObservation.captures.length} measurement(s)`}
-          </Text>
-        </View>
-      )}
-
-      {!activeObservation && (
-        <View style={styles.observations}>
-          <Text style={styles.sectionTitle}>Observations</Text>
-
-          {observations.map((observation) => (
-            <Text key={observation.id} style={styles.observation}>
-              {observation.createdAt.toLocaleTimeString()}
+            <Text style={styles.captureStatus}>
+              {activeObservation.captures.length === 0
+                ? "No measurements recorded"
+                : `${activeObservation.captures.length} measurement(s)`}
             </Text>
-          ))}
-        </View>
-      )}
+          </View>
+        )}
 
-      <StatusBar style="auto" />
-    </View>
+        {!activeObservation && (
+          <View style={styles.observations}>
+            <Text style={styles.sectionTitle}>Observations</Text>
+
+            {observations.map((observation) => (
+              <Text key={observation.id} style={styles.observation}>
+                {observation.createdAt.toLocaleTimeString()}
+              </Text>
+            ))}
+          </View>
+        )}
+
+        <StatusBar style="auto" />
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -254,6 +282,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     padding: 24,
     paddingTop: 80,
+  },
+  content: {
+    flexGrow: 1,
   },
   title: {
     fontSize: 32,
@@ -344,10 +375,18 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "#222",
   },
-
   saveButtonText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "500",
+  },
+  valueInput: {
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 20,
   },
 });
