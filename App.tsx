@@ -167,6 +167,16 @@ export default function App() {
     await captureImage();
   }
 
+  function handleFinishObservation() {
+    setActiveObservation(null);
+    setCapturedImageUri(null);
+    setImageSize(null);
+    setContainerSize(null);
+    setTextRegions([]);
+    setSelectedRegionIndex(null);
+    setEditedValue("");
+  }
+
   async function handleCapture() {
     const observation = createObservation();
 
@@ -337,6 +347,13 @@ export default function App() {
                 )}
               </View>
             )}
+
+            <Pressable
+              style={styles.doneButton}
+              onPress={handleFinishObservation}
+            >
+              <Text style={styles.doneButtonText}>Done</Text>
+            </Pressable>
           </View>
         )}
 
@@ -363,6 +380,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
     padding: 24,
+    paddingBottom: 48,
     paddingTop: 80,
   },
   content: {
@@ -492,5 +510,19 @@ const styles = StyleSheet.create({
 
   measurementValue: {
     fontSize: 20,
+  },
+  doneButton: {
+    alignSelf: "flex-start",
+    marginTop: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#222",
+  },
+
+  doneButtonText: {
+    fontSize: 16,
+    fontWeight: "500",
   },
 });
