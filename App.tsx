@@ -28,6 +28,18 @@ function getContainTransform(
   };
 }
 
+function parseNumericValue(text: string): number | null {
+  const match = text.match(/[-+]?(?:\d+(?:\.\d*)?|\.\d+)/);
+
+  if (!match) {
+    return null;
+  }
+
+  const value = Number(match[0]);
+
+  return Number.isFinite(value) ? value : null;
+}
+
 export default function App() {
   const [observations, setObservations] = useState<Observation[]>([]);
   const [activeObservation, setActiveObservation] =
@@ -85,6 +97,13 @@ export default function App() {
     const regions = await recognizeText(asset.uri);
     setTextRegions(regions);
   }
+
+  const selectedRegion =
+    selectedRegionIndex !== null ? textRegions[selectedRegionIndex] : null;
+
+  const selectedNumericValue = selectedRegion
+    ? parseNumericValue(selectedRegion.text)
+    : null;
 
   return (
     <View style={styles.container}>
@@ -148,6 +167,22 @@ export default function App() {
                     />
                   );
                 })}
+            </View>
+          )}
+
+          {selectedRegion && (
+            <View style={styles.selectedValue}>
+              <Text style={styles.selectedValueLabel}>Selected value</Text>
+
+              <Text style={styles.selectedValueText}>
+                {selectedRegion.text}
+              </Text>
+
+              {selectedNumericValue !== null && (
+                <Text style={styles.parsedValue}>
+                  Numeric value: {selectedNumericValue}
+                </Text>
+              )}
             </View>
           )}
 
@@ -243,5 +278,25 @@ const styles = StyleSheet.create({
   selectedTextRegion: {
     borderColor: "#ff6600",
     backgroundColor: "rgba(255, 102, 0, 0.15)",
+  },
+  selectedValue: {
+    marginTop: 24,
+  },
+
+  selectedValueLabel: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 4,
+  },
+
+  selectedValueText: {
+    fontSize: 24,
+    fontWeight: "600",
+  },
+
+  parsedValue: {
+    marginTop: 4,
+    fontSize: 14,
+    color: "#666",
   },
 });
