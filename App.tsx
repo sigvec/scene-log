@@ -4,12 +4,45 @@ import { useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import type { Observation } from "./src/domain/observation/Observation";
 import { createObservation } from "./src/domain/observation/createObservation";
+import type { TextRegion } from "./src/services/ocr/TextRegion";
+import { recognizeText } from "./src/services/ocr/recognizeText";
+
+function getContainTransform(
+  imageWidth: number,
+  imageHeight: number,
+  containerWidth: number,
+  containerHeight: number,
+) {
+  const scale = Math.min(
+    containerWidth / imageWidth,
+    containerHeight / imageHeight,
+  );
+
+  const renderedWidth = imageWidth * scale;
+  const renderedHeight = imageHeight * scale;
+
+  return {
+    scale,
+    offsetX: (containerWidth - renderedWidth) / 2,
+    offsetY: (containerHeight - renderedHeight) / 2,
+  };
+}
 
 export default function App() {
   const [observations, setObservations] = useState<Observation[]>([]);
   const [activeObservation, setActiveObservation] =
     useState<Observation | null>(null);
   const [capturedImageUri, setCapturedImageUri] = useState<string | null>(null);
+
+  const [imageSize, setImageSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  const [containerSize, setContainerSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  const [textRegions, setTextRegions] = useState<TextRegion[]>([]);
 
   async function handleNewObservation() {
     const observation = createObservation();
@@ -33,7 +66,16 @@ export default function App() {
       return;
     }
 
-    setCapturedImageUri(result.assets[0].uri);
+    const asset = result.assets[0];
+
+    setCapturedImageUri(asset.uri);
+    setImageSize({
+      width: asset.width,
+      height: asset.height,
+    });
+
+    const regions = await recognizeText(asset.uri);
+    setTextRegions(regions);
   }
 
   return (
@@ -52,8 +94,50 @@ export default function App() {
             {activeObservation.createdAt.toLocaleTimeString()}
           </Text>
 
-          {capturedImageUri && (
-            <Image source={{ uri: capturedImageUri }} style={styles.image} />
+          {capturedImageUri && imageSize && (
+            <View
+              style={styles.imageContainer}
+              onLayout={(event) => {
+                const { width, height } = event.nativeEvent.layout;
+
+                setContainerSize({ width, height });
+              }}
+            >
+              <Image
+                source={{ uri: capturedImageUri }}
+                style={styles.image}
+                resizeMode="contain"
+              />
+
+              {containerSize &&
+                textRegions.map((region, index) => {
+                  const transform = getContainTransform(
+                    imageSize.width,
+                    imageSize.height,
+                    containerSize.width,
+                    containerSize.height,
+                  );
+
+                  return (
+                    <View
+                      key={`${region.text}-${index}`}
+                      style={[
+                        styles.textRegion,
+                        {
+                          left:
+                            transform.offsetX +
+                            region.bounds.x * transform.scale,
+                          top:
+                            transform.offsetY +
+                            region.bounds.y * transform.scale,
+                          width: region.bounds.width * transform.scale,
+                          height: region.bounds.height * transform.scale,
+                        },
+                      ]}
+                    />
+                  );
+                })}
+            </View>
           )}
 
           <Text style={styles.captureStatus}>
@@ -119,8 +203,7 @@ const styles = StyleSheet.create({
   },
   image: {
     width: "100%",
-    height: 300,
-    marginTop: 24,
+    height: "100%",
     borderRadius: 8,
   },
   captureStatus: {
@@ -133,5 +216,17 @@ const styles = StyleSheet.create({
   observation: {
     fontSize: 16,
     paddingVertical: 8,
+  },
+  imageContainer: {
+    width: "100%",
+    height: 300,
+    marginTop: 24,
+    position: "relative",
+    overflow: "hidden",
+  },
+  textRegion: {
+    position: "absolute",
+    borderWidth: 2,
+    borderColor: "#00aaff",
   },
 });
