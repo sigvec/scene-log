@@ -6,6 +6,8 @@ import type { Observation } from "./src/domain/observation/Observation";
 import { createObservation } from "./src/domain/observation/createObservation";
 import type { TextRegion } from "./src/services/ocr/TextRegion";
 import { recognizeText } from "./src/services/ocr/recognizeText";
+import { createCapture } from "./src/domain/capture/createCapture";
+import { BUILT_IN_FIELD_IDS } from "./src/domain/field/builtInFields";
 
 function getContainTransform(
   imageWidth: number,
@@ -58,6 +60,36 @@ export default function App() {
   const [selectedRegionIndex, setSelectedRegionIndex] = useState<number | null>(
     null,
   );
+
+  function handleSaveValue() {
+    if (!activeObservation || selectedNumericValue === null) {
+      return;
+    }
+
+    const capture = createCapture([
+      {
+        fieldId: BUILT_IN_FIELD_IDS.value,
+        value: selectedNumericValue,
+      },
+    ]);
+
+    const updatedObservation: Observation = {
+      ...activeObservation,
+      captures: [...activeObservation.captures, capture],
+    };
+
+    setActiveObservation(updatedObservation);
+
+    setObservations((current) =>
+      current.map((observation) =>
+        observation.id === updatedObservation.id
+          ? updatedObservation
+          : observation,
+      ),
+    );
+
+    setSelectedRegionIndex(null);
+  }
 
   async function handleNewObservation() {
     const observation = createObservation();
@@ -183,6 +215,11 @@ export default function App() {
                   Numeric value: {selectedNumericValue}
                 </Text>
               )}
+              {selectedNumericValue !== null && (
+                <Pressable style={styles.saveButton} onPress={handleSaveValue}>
+                  <Text style={styles.saveButtonText}>Save Value</Text>
+                </Pressable>
+              )}
             </View>
           )}
 
@@ -298,5 +335,19 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 14,
     color: "#666",
+  },
+  saveButton: {
+    alignSelf: "flex-start",
+    marginTop: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: "#222",
+  },
+
+  saveButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "500",
   },
 });
