@@ -255,6 +255,25 @@ export default function App() {
                 ? "No measurements recorded"
                 : `${activeObservation.captures.length} measurement(s)`}
             </Text>
+
+            {activeObservation.captures.length > 0 && (
+              <View style={styles.measurements}>
+                <Text style={styles.measurementsTitle}>Measurements</Text>
+
+                {activeObservation.captures.map((capture) =>
+                  capture.fieldValues.map((fieldValue, index) => (
+                    <View
+                      key={`${capture.id}-${index}`}
+                      style={styles.measurement}
+                    >
+                      <Text style={styles.measurementValue}>
+                        {fieldValue.value}
+                      </Text>
+                    </View>
+                  )),
+                )}
+              </View>
+            )}
           </View>
         )}
 
@@ -387,6 +406,28 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
+    fontSize: 20,
+  },
+  measurements: {
+    marginTop: 24,
+  },
+
+  measurementsTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 12,
+  },
+
+  measurement: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+  },
+
+  measurementValue: {
     fontSize: 20,
   },
 });
