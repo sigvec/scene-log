@@ -43,9 +43,17 @@ export default function App() {
     height: number;
   } | null>(null);
   const [textRegions, setTextRegions] = useState<TextRegion[]>([]);
+  const [selectedRegionIndex, setSelectedRegionIndex] = useState<number | null>(
+    null,
+  );
 
   async function handleNewObservation() {
     const observation = createObservation();
+
+    setImageSize(null);
+    setContainerSize(null);
+    setTextRegions([]);
+    setSelectedRegionIndex(null);
 
     setObservations((current) => [...current, observation]);
     setActiveObservation(observation);
@@ -119,10 +127,13 @@ export default function App() {
                   );
 
                   return (
-                    <View
+                    <Pressable
                       key={`${region.text}-${index}`}
+                      onPress={() => setSelectedRegionIndex(index)}
                       style={[
                         styles.textRegion,
+                        selectedRegionIndex === index &&
+                          styles.selectedTextRegion,
                         {
                           left:
                             transform.offsetX +
@@ -228,5 +239,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     borderWidth: 2,
     borderColor: "#00aaff",
+  },
+  selectedTextRegion: {
+    borderColor: "#ff6600",
+    backgroundColor: "rgba(255, 102, 0, 0.15)",
   },
 });
