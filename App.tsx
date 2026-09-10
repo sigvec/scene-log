@@ -177,6 +177,16 @@ export default function App() {
     setEditedValue("");
   }
 
+  function handleCloseObservation() {
+    setActiveObservation(null);
+    setCapturedImageUri(null);
+    setImageSize(null);
+    setContainerSize(null);
+    setTextRegions([]);
+    setSelectedRegionIndex(null);
+    setEditedValue("");
+  }
+
   async function handleCapture() {
     const observation = createObservation();
 
@@ -350,9 +360,11 @@ export default function App() {
 
             <Pressable
               style={styles.doneButton}
-              onPress={handleFinishObservation}
+              onPress={handleCloseObservation}
             >
-              <Text style={styles.doneButtonText}>Done</Text>
+              <Text style={styles.doneButtonText}>
+                {capturedImageUri ? "Done" : "Back"}
+              </Text>
             </Pressable>
           </View>
         )}
@@ -362,9 +374,18 @@ export default function App() {
             <Text style={styles.sectionTitle}>Observations</Text>
 
             {observations.map((observation) => (
-              <Text key={observation.id} style={styles.observation}>
-                {observation.createdAt.toLocaleTimeString()}
-              </Text>
+              <Pressable
+                key={observation.id}
+                style={styles.observation}
+                onPress={() => setActiveObservation(observation)}
+              >
+                <Text style={styles.observationTime}>
+                  {observation.createdAt.toLocaleTimeString()}
+                </Text>
+                <Text style={styles.observationCount}>
+                  {observation.captures.length} measurement(s)
+                </Text>
+              </Pressable>
             ))}
           </View>
         )}
@@ -428,8 +449,22 @@ const styles = StyleSheet.create({
     marginTop: 48,
   },
   observation: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+  },
+
+  observationTime: {
     fontSize: 16,
-    paddingVertical: 8,
+  },
+
+  observationCount: {
+    marginTop: 4,
+    fontSize: 14,
+    color: "#666",
   },
   imageContainer: {
     width: "100%",
