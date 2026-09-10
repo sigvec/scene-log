@@ -108,7 +108,66 @@ export default function App() {
     setEditedValue("");
   }
 
+  async function captureImage() {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+
+    if (!permission.granted) {
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ["images"],
+      quality: 1,
+    });
+
+    if (result.canceled) {
+      return;
+    }
+
+    const asset = result.assets[0];
+
+    setCapturedImageUri(asset.uri);
+    setImageSize({
+      width: asset.width,
+      height: asset.height,
+    });
+
+    const regions = await recognizeText(asset.uri);
+    setTextRegions(regions);
+  }
+
   async function handleNewObservation() {
+    const observation = createObservation();
+
+    setImageSize(null);
+    setContainerSize(null);
+    setTextRegions([]);
+    setSelectedRegionIndex(null);
+    setEditedValue("");
+
+    setObservations((current) => [...current, observation]);
+    setActiveObservation(observation);
+    setCapturedImageUri(null);
+
+    await captureImage();
+  }
+
+  async function handleAddMeasurement() {
+    if (!activeObservation) {
+      return;
+    }
+
+    setImageSize(null);
+    setContainerSize(null);
+    setTextRegions([]);
+    setSelectedRegionIndex(null);
+    setEditedValue("");
+    setCapturedImageUri(null);
+
+    await captureImage();
+  }
+
+  async function handleCapture() {
     const observation = createObservation();
 
     setImageSize(null);
@@ -255,6 +314,10 @@ export default function App() {
                 ? "No measurements recorded"
                 : `${activeObservation.captures.length} measurement(s)`}
             </Text>
+
+            <Pressable style={styles.button} onPress={handleAddMeasurement}>
+              <Text style={styles.buttonText}>Add Measurement</Text>
+            </Pressable>
 
             {activeObservation.captures.length > 0 && (
               <View style={styles.measurements}>
