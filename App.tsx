@@ -18,6 +18,7 @@ import { recognizeText } from "./src/services/ocr/recognizeText";
 import { createCapture } from "./src/domain/capture/createCapture";
 import { BUILT_IN_FIELD_IDS } from "./src/domain/field/builtInFields";
 import { AppButton } from "./src/components/AppButton";
+import { Card } from "./src/components/Card";
 
 function getContainTransform(
   imageWidth: number,
@@ -346,11 +347,13 @@ export default function App() {
                   capture.fieldValues.map((fieldValue, index) => (
                     <View
                       key={`${capture.id}-${index}`}
-                      style={styles.measurement}
+                      style={styles.measurementWrapper}
                     >
-                      <Text style={styles.measurementValue}>
-                        {fieldValue.value}
-                      </Text>
+                      <Card>
+                        <Text style={styles.measurementValue}>
+                          {fieldValue.value}
+                        </Text>
+                      </Card>
                     </View>
                   )),
                 )}
@@ -526,22 +529,14 @@ const styles = StyleSheet.create({
   measurements: {
     marginTop: 24,
   },
-
+  measurementWrapper: {
+    marginBottom: 8,
+  },
   measurementsTitle: {
     fontSize: 18,
     fontWeight: "600",
     marginBottom: 12,
   },
-
-  measurement: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-  },
-
   measurementValue: {
     fontSize: 20,
   },
