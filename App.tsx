@@ -17,8 +17,8 @@ import type { TextRegion } from "./src/services/ocr/TextRegion";
 import { recognizeText } from "./src/services/ocr/recognizeText";
 import { createCapture } from "./src/domain/capture/createCapture";
 import { BUILT_IN_FIELD_IDS } from "./src/domain/field/builtInFields";
-import { AppButton } from "./src/components/AppButton";
 import { Card } from "./src/components/Card";
+import { FileText, Plus } from "lucide-react-native";
 
 function getContainTransform(
   imageWidth: number,
@@ -243,7 +243,9 @@ export default function App() {
       >
         <Text style={styles.title}>SceneLog</Text>
 
-        <AppButton onPress={handleNewObservation}>New Observation</AppButton>
+        <Text style={styles.subtitle}>
+          Capture what you observe. Keep the details that matter.
+        </Text>
 
         {activeObservation && (
           <View style={styles.activeObservation}>
@@ -373,22 +375,46 @@ export default function App() {
 
         {!activeObservation && (
           <View style={styles.observations}>
-            <Text style={styles.sectionTitle}>Observations</Text>
+            {observations.length === 0 ? (
+              <Card>
+                <View style={styles.emptyStateIcon}>
+                  <FileText size={28} strokeWidth={1.8} color="#555" />
+                </View>
 
-            {observations.map((observation) => (
-              <Pressable
-                key={observation.id}
-                style={styles.observation}
-                onPress={() => setActiveObservation(observation)}
-              >
-                <Text style={styles.observationTime}>
-                  {observation.createdAt.toLocaleTimeString()}
+                <Text style={styles.emptyStateTitle}>No observations yet</Text>
+
+                <Text style={styles.emptyStateText}>
+                  Start by capturing your first observation.
                 </Text>
-                <Text style={styles.observationCount}>
-                  {observation.captures.length} measurement(s)
-                </Text>
-              </Pressable>
-            ))}
+
+                <Pressable
+                  style={styles.primaryButton}
+                  onPress={handleNewObservation}
+                >
+                  <Plus size={20} strokeWidth={2.2} color="#fff" />
+                  <Text style={styles.primaryButtonText}>New Observation</Text>
+                </Pressable>
+              </Card>
+            ) : (
+              <>
+                <Text style={styles.sectionTitle}>Observations</Text>
+
+                {observations.map((observation) => (
+                  <Pressable
+                    key={observation.id}
+                    style={styles.observation}
+                    onPress={() => setActiveObservation(observation)}
+                  >
+                    <Text style={styles.observationTime}>
+                      {observation.createdAt.toLocaleTimeString()}
+                    </Text>
+                    <Text style={styles.observationCount}>
+                      {observation.captures.length} measurement(s)
+                    </Text>
+                  </Pressable>
+                ))}
+              </>
+            )}
           </View>
         )}
 
@@ -401,18 +427,66 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
-    padding: 24,
+    backgroundColor: "#F6F7F9",
+    paddingHorizontal: 20,
     paddingBottom: 48,
-    paddingTop: 80,
+    paddingTop: 56,
   },
   content: {
     flexGrow: 1,
   },
   title: {
-    fontSize: 32,
-    fontWeight: "600",
+    fontSize: 34,
+    fontWeight: "700",
+    letterSpacing: -0.5,
+    marginBottom: 28,
+  },
+  subtitle: {
+    marginTop: -16,
     marginBottom: 32,
+    fontSize: 16,
+    lineHeight: 24,
+    color: "#666",
+  },
+
+  emptyStateIcon: {
+    alignItems: "center",
+    justifyContent: "center",
+    width: 56,
+    height: 56,
+    marginBottom: 20,
+    borderRadius: 28,
+    backgroundColor: "#F0F1F3",
+  },
+
+  emptyStateTitle: {
+    fontSize: 22,
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+
+  emptyStateText: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: "#666",
+    marginBottom: 24,
+  },
+
+  primaryButton: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 13,
+    borderRadius: 8,
+    backgroundColor: "#2563EB",
+  },
+
+  primaryButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
   button: {
     alignSelf: "flex-start",
@@ -448,7 +522,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   observations: {
-    marginTop: 48,
+    marginTop: 8,
   },
   observation: {
     paddingVertical: 12,
