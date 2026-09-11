@@ -18,7 +18,7 @@ import { recognizeText } from "./src/services/ocr/recognizeText";
 import { createCapture } from "./src/domain/capture/createCapture";
 import { BUILT_IN_FIELD_IDS } from "./src/domain/field/builtInFields";
 import { Card } from "./src/components/Card";
-import { FileText, Plus } from "lucide-react-native";
+import { ChevronRight, FileText, Plus } from "lucide-react-native";
 
 function getContainTransform(
   imageWidth: number,
@@ -397,20 +397,43 @@ export default function App() {
               </Card>
             ) : (
               <>
-                <Text style={styles.sectionTitle}>Observations</Text>
+                <View style={styles.observationsHeader}>
+                  <Text style={styles.sectionTitle}>Observations</Text>
+
+                  <Pressable
+                    style={styles.primaryButton}
+                    onPress={handleNewObservation}
+                  >
+                    <Plus size={18} strokeWidth={2.2} color="#fff" />
+                    <Text style={styles.primaryButtonText}>
+                      New Observation
+                    </Text>
+                  </Pressable>
+                </View>
 
                 {observations.map((observation) => (
                   <Pressable
                     key={observation.id}
-                    style={styles.observation}
                     onPress={() => setActiveObservation(observation)}
                   >
-                    <Text style={styles.observationTime}>
-                      {observation.createdAt.toLocaleTimeString()}
-                    </Text>
-                    <Text style={styles.observationCount}>
-                      {observation.captures.length} measurement(s)
-                    </Text>
+                    <Card>
+                      <View style={styles.observationContent}>
+                        <View>
+                          <Text style={styles.observationTime}>
+                            {observation.createdAt.toLocaleTimeString()}
+                          </Text>
+                          <Text style={styles.observationCount}>
+                            {observation.captures.length} measurement(s)
+                          </Text>
+                        </View>
+
+                        <ChevronRight
+                          size={22}
+                          strokeWidth={1.8}
+                          color="#777"
+                        />
+                      </View>
+                    </Card>
                   </Pressable>
                 ))}
               </>
@@ -506,7 +529,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: "600",
-    marginBottom: 8,
   },
   timestamp: {
     fontSize: 14,
@@ -524,21 +546,22 @@ const styles = StyleSheet.create({
   observations: {
     marginTop: 8,
   },
-  observation: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
+  observationsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
   },
-
+  observationContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   observationTime: {
     fontSize: 16,
   },
-
   observationCount: {
-    marginTop: 4,
+    marginTop: 6,
     fontSize: 14,
     color: "#666",
   },
