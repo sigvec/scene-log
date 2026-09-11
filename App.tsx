@@ -17,6 +17,7 @@ import type { TextRegion } from "./src/services/ocr/TextRegion";
 import { recognizeText } from "./src/services/ocr/recognizeText";
 import { createCapture } from "./src/domain/capture/createCapture";
 import { BUILT_IN_FIELD_IDS } from "./src/domain/field/builtInFields";
+import { AppButton } from "./src/components/AppButton";
 
 function getContainTransform(
   imageWidth: number,
@@ -241,9 +242,7 @@ export default function App() {
       >
         <Text style={styles.title}>SceneLog</Text>
 
-        <Pressable style={styles.button} onPress={handleNewObservation}>
-          <Text style={styles.buttonText}>New Observation</Text>
-        </Pressable>
+        <AppButton onPress={handleNewObservation}>New Observation</AppButton>
 
         {activeObservation && (
           <View style={styles.activeObservation}>
