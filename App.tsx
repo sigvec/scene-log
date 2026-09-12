@@ -240,6 +240,9 @@ export default function App() {
       capture.fieldValues.map((fieldValue) => fieldValue.value),
     );
 
+  const [reviewObservation, setReviewObservation] =
+    useState<Observation | null>(null);
+
   return (
     <KeyboardAvoidingView style={styles.container} behavior="height">
       <ScrollView
@@ -378,7 +381,45 @@ export default function App() {
           </View>
         )}
 
-        {!activeObservation && (
+        {reviewObservation && (
+          <View style={styles.reviewObservation}>
+            <Text style={styles.sectionTitle}>Observation</Text>
+
+            <Text style={styles.timestamp}>
+              {reviewObservation.createdAt.toLocaleTimeString()}
+            </Text>
+
+            {reviewObservation.captures.length > 0 && (
+              <View style={styles.measurements}>
+                <Text style={styles.measurementsTitle}>Measurements</Text>
+
+                <View style={styles.reviewValues}>
+                  {reviewObservation.captures.flatMap((capture) =>
+                    capture.fieldValues.map((fieldValue, index) => (
+                      <View
+                        key={`${capture.id}-${index}`}
+                        style={styles.valuePill}
+                      >
+                        <Text style={styles.valuePillText}>
+                          {fieldValue.value}
+                        </Text>
+                      </View>
+                    )),
+                  )}
+                </View>
+              </View>
+            )}
+
+            <Pressable
+              style={styles.doneButton}
+              onPress={() => setReviewObservation(null)}
+            >
+              <Text style={styles.doneButtonText}>Back</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {!activeObservation && !reviewObservation && (
           <View style={styles.observations}>
             {observations.length === 0 ? (
               <Card>
@@ -419,7 +460,7 @@ export default function App() {
                 {observations.map((observation) => (
                   <Pressable
                     key={observation.id}
-                    onPress={() => setActiveObservation(observation)}
+                    onPress={() => setReviewObservation(observation)}
                   >
                     <Card>
                       <View style={styles.observationContent}>
@@ -695,5 +736,15 @@ const styles = StyleSheet.create({
   valuePillText: {
     fontSize: 15,
     fontWeight: "600",
+  },
+  reviewObservation: {
+    marginTop: 40,
+  },
+
+  reviewValues: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 12,
   },
 });
