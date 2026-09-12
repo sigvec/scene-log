@@ -434,6 +434,14 @@ export default function App() {
               {reviewObservation.createdAt.toLocaleTimeString()}
             </Text>
 
+            {reviewObservation.imageUri && (
+              <Image
+                source={{ uri: reviewObservation.imageUri }}
+                style={styles.reviewImage}
+                resizeMode="contain"
+              />
+            )}
+
             <View style={styles.reviewSection}>
               <Text style={styles.reviewSectionTitle}>Measurements</Text>
 
@@ -821,5 +829,11 @@ const styles = StyleSheet.create({
   reviewEmpty: {
     fontSize: 15,
     color: "#666",
+  },
+  reviewImage: {
+    width: "100%",
+    height: 300,
+    marginTop: 24,
+    borderRadius: 8,
   },
 });
