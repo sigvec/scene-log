@@ -113,6 +113,7 @@ export default function App() {
 
     setSelectedRegionIndex(null);
     setEditedValue("");
+    setManualEntry(false);
   }
 
   async function captureImage(observation?: Observation) {
@@ -166,10 +167,17 @@ export default function App() {
 
     const regions = await recognizeText(asset.uri);
     setTextRegions(regions);
+
+    if (regions.length === 0) {
+      setCameraStatus(
+        "No text was detected. You can enter the measurement manually.",
+      );
+    }
   }
 
   async function handleNewObservation() {
     setCameraStatus(null);
+    setManualEntry(false);
     const observation = createObservation();
 
     setImageSize(null);
@@ -190,6 +198,7 @@ export default function App() {
       return;
     }
     setCameraStatus(null);
+    setManualEntry(false);
 
     setImageSize(null);
     setContainerSize(null);
@@ -276,6 +285,7 @@ export default function App() {
     useState<Observation | null>(null);
   const [observationsLoaded, setObservationsLoaded] = useState(false);
   const [cameraStatus, setCameraStatus] = useState<string | null>(null);
+  const [manualEntry, setManualEntry] = useState(false);
 
   useEffect(() => {
     async function loadSavedObservations() {
@@ -369,13 +379,17 @@ export default function App() {
               </View>
             )}
 
-            {selectedRegion && (
+            {(selectedRegion || manualEntry) && (
               <View style={styles.selectedValue}>
-                <Text style={styles.selectedValueLabel}>Selected value</Text>
-
-                <Text style={styles.selectedValueText}>
-                  {selectedRegion.text}
+                <Text style={styles.selectedValueLabel}>
+                  {manualEntry ? "Enter value" : "Selected value"}
                 </Text>
+
+                {selectedRegion && (
+                  <Text style={styles.selectedValueText}>
+                    {selectedRegion.text}
+                  </Text>
+                )}
 
                 <TextInput
                   value={editedValue}
@@ -399,6 +413,20 @@ export default function App() {
 
             {cameraStatus && (
               <Text style={styles.cameraStatus}>{cameraStatus}</Text>
+            )}
+
+            {cameraStatus?.startsWith("No text") && (
+              <Pressable
+                style={styles.manualEntryButton}
+                onPress={() => {
+                  setManualEntry(true);
+                  setEditedValue("");
+                }}
+              >
+                <Text style={styles.manualEntryButtonText}>
+                  Enter Value Manually
+                </Text>
+              </Pressable>
             )}
 
             <Pressable style={styles.button} onPress={handleAddMeasurement}>
@@ -851,5 +879,19 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 14,
     color: "#666",
+  },
+  manualEntryButton: {
+    alignSelf: "flex-start",
+    marginTop: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#999",
+  },
+
+  manualEntryButtonText: {
+    fontSize: 15,
+    fontWeight: "500",
   },
 });
