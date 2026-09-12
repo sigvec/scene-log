@@ -383,16 +383,16 @@ export default function App() {
 
         {reviewObservation && (
           <View style={styles.reviewObservation}>
-            <Text style={styles.sectionTitle}>Observation</Text>
+            <Text style={styles.reviewTitle}>Observation</Text>
 
-            <Text style={styles.timestamp}>
+            <Text style={styles.reviewTimestamp}>
               {reviewObservation.createdAt.toLocaleTimeString()}
             </Text>
 
-            {reviewObservation.captures.length > 0 && (
-              <View style={styles.measurements}>
-                <Text style={styles.measurementsTitle}>Measurements</Text>
+            <View style={styles.reviewSection}>
+              <Text style={styles.reviewSectionTitle}>Measurements</Text>
 
+              {reviewObservation.captures.length > 0 ? (
                 <View style={styles.reviewValues}>
                   {reviewObservation.captures.flatMap((capture) =>
                     capture.fieldValues.map((fieldValue, index) => (
@@ -407,8 +407,12 @@ export default function App() {
                     )),
                   )}
                 </View>
-              </View>
-            )}
+              ) : (
+                <Text style={styles.reviewEmpty}>
+                  No measurements recorded.
+                </Text>
+              )}
+            </View>
 
             <Pressable
               style={styles.doneButton}
@@ -737,14 +741,40 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
   },
-  reviewObservation: {
-    marginTop: 40,
-  },
-
   reviewValues: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
     marginTop: 12,
+  },
+  reviewObservation: {
+    marginTop: 40,
+  },
+
+  reviewTitle: {
+    fontSize: 28,
+    fontWeight: "600",
+    letterSpacing: -0.3,
+  },
+
+  reviewTimestamp: {
+    marginTop: 6,
+    fontSize: 14,
+    color: "#666",
+  },
+
+  reviewSection: {
+    marginTop: 32,
+  },
+
+  reviewSectionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 12,
+  },
+
+  reviewEmpty: {
+    fontSize: 15,
+    color: "#666",
   },
 });
