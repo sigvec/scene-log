@@ -235,6 +235,11 @@ export default function App() {
     ? parseNumericValue(selectedRegion.text)
     : null;
 
+  const measurementValues = (observation: Observation) =>
+    observation.captures.flatMap((capture) =>
+      capture.fieldValues.map((fieldValue) => fieldValue.value),
+    );
+
   return (
     <KeyboardAvoidingView style={styles.container} behavior="height">
       <ScrollView
@@ -418,10 +423,11 @@ export default function App() {
                   >
                     <Card>
                       <View style={styles.observationContent}>
-                        <View>
+                        <View style={styles.observationDetails}>
                           <Text style={styles.observationTime}>
                             {observation.createdAt.toLocaleTimeString()}
                           </Text>
+
                           <Text style={styles.observationCount}>
                             {observation.captures.length} measurement(s)
                           </Text>
@@ -433,6 +439,23 @@ export default function App() {
                           color="#777"
                         />
                       </View>
+
+                      {measurementValues(observation).length > 0 && (
+                        <View style={styles.measurementValues}>
+                          {measurementValues(observation).map(
+                            (value, index) => (
+                              <View
+                                key={`${observation.id}-${index}`}
+                                style={styles.valuePill}
+                              >
+                                <Text style={styles.valuePillText}>
+                                  {value}
+                                </Text>
+                              </View>
+                            ),
+                          )}
+                        </View>
+                      )}
                     </Card>
                   </Pressable>
                 ))}
@@ -650,5 +673,27 @@ const styles = StyleSheet.create({
   doneButtonText: {
     fontSize: 16,
     fontWeight: "500",
+  },
+  observationDetails: {
+    flex: 1,
+  },
+
+  measurementValues: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 16,
+  },
+
+  valuePill: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 16,
+    backgroundColor: "#EEF2FF",
+  },
+
+  valuePillText: {
+    fontSize: 15,
+    fontWeight: "600",
   },
 });
