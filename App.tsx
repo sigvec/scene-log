@@ -119,6 +119,9 @@ export default function App() {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
 
     if (!permission.granted) {
+      setCameraStatus(
+        "Camera permission is required to capture an observation.",
+      );
       return;
     }
 
@@ -128,6 +131,7 @@ export default function App() {
     });
 
     if (result.canceled) {
+      setCameraStatus("Capture cancelled.");
       return;
     }
 
@@ -165,6 +169,7 @@ export default function App() {
   }
 
   async function handleNewObservation() {
+    setCameraStatus(null);
     const observation = createObservation();
 
     setImageSize(null);
@@ -184,6 +189,7 @@ export default function App() {
     if (!activeObservation) {
       return;
     }
+    setCameraStatus(null);
 
     setImageSize(null);
     setContainerSize(null);
@@ -269,6 +275,7 @@ export default function App() {
   const [reviewObservation, setReviewObservation] =
     useState<Observation | null>(null);
   const [observationsLoaded, setObservationsLoaded] = useState(false);
+  const [cameraStatus, setCameraStatus] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadSavedObservations() {
@@ -389,6 +396,10 @@ export default function App() {
                 ? "No measurements recorded"
                 : `${activeObservation.captures.length} measurement(s)`}
             </Text>
+
+            {cameraStatus && (
+              <Text style={styles.cameraStatus}>{cameraStatus}</Text>
+            )}
 
             <Pressable style={styles.button} onPress={handleAddMeasurement}>
               <Text style={styles.buttonText}>Add Measurement</Text>
@@ -835,5 +846,10 @@ const styles = StyleSheet.create({
     height: 300,
     marginTop: 24,
     borderRadius: 8,
+  },
+  cameraStatus: {
+    marginTop: 8,
+    fontSize: 14,
+    color: "#666",
   },
 });
