@@ -19,7 +19,10 @@ import { createCapture } from "./src/domain/capture/createCapture";
 import { BUILT_IN_FIELD_IDS } from "./src/domain/field/builtInFields";
 import { Card } from "./src/components/Card";
 import { ChevronRight, FileText, Plus } from "lucide-react-native";
-import { loadObservations } from "./src/services/storage/observationStorage";
+import {
+  loadObservations,
+  saveObservations,
+} from "./src/services/storage/observationStorage";
 
 function getContainTransform(
   imageWidth: number,
@@ -243,15 +246,25 @@ export default function App() {
 
   const [reviewObservation, setReviewObservation] =
     useState<Observation | null>(null);
+  const [observationsLoaded, setObservationsLoaded] = useState(false);
 
   useEffect(() => {
     async function loadSavedObservations() {
       const savedObservations = await loadObservations();
       setObservations(savedObservations);
+      setObservationsLoaded(true);
     }
 
     loadSavedObservations();
   }, []);
+
+  useEffect(() => {
+    if (!observationsLoaded) {
+      return;
+    }
+
+    saveObservations(observations);
+  }, [observations, observationsLoaded]);
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior="height">
