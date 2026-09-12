@@ -1,6 +1,6 @@
 import { StatusBar } from "expo-status-bar";
 import * as ImagePicker from "expo-image-picker";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Image,
   KeyboardAvoidingView,
@@ -19,6 +19,7 @@ import { createCapture } from "./src/domain/capture/createCapture";
 import { BUILT_IN_FIELD_IDS } from "./src/domain/field/builtInFields";
 import { Card } from "./src/components/Card";
 import { ChevronRight, FileText, Plus } from "lucide-react-native";
+import { loadObservations } from "./src/services/storage/observationStorage";
 
 function getContainTransform(
   imageWidth: number,
@@ -242,6 +243,15 @@ export default function App() {
 
   const [reviewObservation, setReviewObservation] =
     useState<Observation | null>(null);
+
+  useEffect(() => {
+    async function loadSavedObservations() {
+      const savedObservations = await loadObservations();
+      setObservations(savedObservations);
+    }
+
+    loadSavedObservations();
+  }, []);
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior="height">
