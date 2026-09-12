@@ -23,6 +23,7 @@ import {
   loadObservations,
   saveObservations,
 } from "./src/services/storage/observationStorage";
+import { copyImageToStorage } from "./src/services/storage/imageStorage";
 
 function getContainTransform(
   imageWidth: number,
@@ -114,7 +115,7 @@ export default function App() {
     setEditedValue("");
   }
 
-  async function captureImage() {
+  async function captureImage(observation?: Observation) {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
 
     if (!permission.granted) {
@@ -138,6 +139,27 @@ export default function App() {
       height: asset.height,
     });
 
+    const storedImageUri = await copyImageToStorage(asset.uri);
+
+    const currentObservation = observation ?? activeObservation;
+
+    if (currentObservation) {
+      const updatedObservation: Observation = {
+        ...currentObservation,
+        imageUri: storedImageUri,
+      };
+
+      setActiveObservation(updatedObservation);
+
+      setObservations((current) =>
+        current.map((observation) =>
+          observation.id === updatedObservation.id
+            ? updatedObservation
+            : observation,
+        ),
+      );
+    }
+
     const regions = await recognizeText(asset.uri);
     setTextRegions(regions);
   }
@@ -155,7 +177,7 @@ export default function App() {
     setActiveObservation(observation);
     setCapturedImageUri(null);
 
-    await captureImage();
+    await captureImage(observation);
   }
 
   async function handleAddMeasurement() {
@@ -170,7 +192,7 @@ export default function App() {
     setEditedValue("");
     setCapturedImageUri(null);
 
-    await captureImage();
+    await captureImage(activeObservation);
   }
 
   function handleFinishObservation() {
