@@ -1,5 +1,6 @@
 const mockCreate = jest.fn();
 const mockCopy = jest.fn();
+const mockDelete = jest.fn();
 
 describe("copyImageToStorage", () => {
   beforeEach(() => {
@@ -17,6 +18,7 @@ describe("copyImageToStorage", () => {
             ? uriOrDirectory
             : `file:///documents/images/${fileName}`,
         copy: mockCopy,
+        delete: mockDelete,
       })),
       Paths: {
         document: "file:///documents",
@@ -43,5 +45,17 @@ describe("copyImageToStorage", () => {
     expect(result).toMatch(
       /^file:\/\/\/documents\/images\/\d+-[a-z0-9]+\.jpg$/,
     );
+  });
+
+  it("deletes a stored image", () => {
+    const {
+      deleteImageFromStorage,
+    } = require("../src/services/storage/imageStorage");
+
+    const imageUri = "file:///documents/images/test-image.jpg";
+
+    deleteImageFromStorage(imageUri);
+
+    expect(mockDelete).toHaveBeenCalledTimes(1);
   });
 });

@@ -16,3 +16,8 @@ export async function copyImageToStorage(sourceUri: string): Promise<string> {
 
   return destination.uri;
 }
+
+export function deleteImageFromStorage(imageUri: string): void {
+  const image = new File(imageUri);
+  image.delete();
+}
