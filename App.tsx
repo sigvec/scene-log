@@ -19,7 +19,15 @@ import { recognizeText } from "./src/services/ocr/recognizeText";
 import { createCapture } from "./src/domain/capture/createCapture";
 import { BUILT_IN_FIELD_IDS } from "./src/domain/field/builtInFields";
 import { Card } from "./src/components/Card";
-import { ChevronRight, FileText, Plus } from "lucide-react-native";
+import {
+  ArrowLeft,
+  Camera,
+  Check,
+  ChevronRight,
+  FileText,
+  Plus,
+  Trash2,
+} from "lucide-react-native";
 import {
   loadObservations,
   saveObservations,
@@ -317,10 +325,6 @@ export default function App() {
   const selectedRegion =
     selectedRegionIndex !== null ? textRegions[selectedRegionIndex] : null;
 
-  const selectedNumericValue = selectedRegion
-    ? parseNumericValue(selectedRegion.text)
-    : null;
-
   const measurementValues = (observation: Observation) =>
     observation.captures.flatMap((capture) =>
       capture.fieldValues.map((fieldValue) => fieldValue.value),
@@ -356,85 +360,150 @@ export default function App() {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.title}>SceneLog</Text>
+        {!activeObservation && !reviewObservation && (
+          <>
+            <Text style={styles.title}>SceneLog</Text>
 
-        <Text style={styles.subtitle}>
-          Capture what you observe. Keep the details that matter.
-        </Text>
+            <Text style={styles.subtitle}>
+              Capture what you observe. Keep the details that matter.
+            </Text>
+          </>
+        )}
 
         {activeObservation && (
           <View style={styles.activeObservation}>
-            <Text style={styles.sectionTitle}>Observation</Text>
+            <View style={styles.observationHeader}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Back to observations"
+                hitSlop={8}
+                style={styles.headerBackButton}
+                onPress={handleCloseObservation}
+              >
+                <ArrowLeft size={22} strokeWidth={2} color="#222" />
+              </Pressable>
 
-            <Text style={styles.timestamp}>
-              {activeObservation.createdAt.toLocaleTimeString()}
-            </Text>
+              <View style={styles.observationHeaderText}>
+                <Text style={styles.activeTitle}>Observation</Text>
+                <Text style={styles.timestamp}>
+                  {activeObservation.createdAt.toLocaleTimeString()}
+                </Text>
+              </View>
+            </View>
 
             {capturedImageUri && imageSize && (
-              <View
-                style={styles.imageContainer}
-                onLayout={(event) => {
-                  const { width, height } = event.nativeEvent.layout;
+              <View style={styles.imageSection}>
+                <View style={styles.imageHeader}>
+                  <View>
+                    <Text style={styles.imageTitle}>Captured scene</Text>
+                    <Text style={styles.imageHint}>
+                      {selectedRegion
+                        ? "Reading selected"
+                        : textRegions.length > 0
+                          ? "Tap a reading to select it"
+                          : "Review the captured scene"}
+                    </Text>
+                  </View>
+                  <Camera size={20} strokeWidth={1.8} color="#666" />
+                </View>
 
-                  setContainerSize({ width, height });
-                }}
-              >
-                <Image
-                  source={{ uri: capturedImageUri }}
-                  style={styles.image}
-                  resizeMode="contain"
-                />
+                <View
+                  style={styles.imageContainer}
+                  onLayout={(event) => {
+                    const { width, height } = event.nativeEvent.layout;
 
-                {containerSize &&
-                  textRegions.map((region, index) => {
-                    const transform = getContainTransform(
-                      imageSize.width,
-                      imageSize.height,
-                      containerSize.width,
-                      containerSize.height,
-                    );
+                    setContainerSize({ width, height });
+                  }}
+                >
+                  <Image
+                    source={{ uri: capturedImageUri }}
+                    style={styles.image}
+                    resizeMode="contain"
+                  />
 
-                    return (
-                      <Pressable
-                        key={`${region.text}-${index}`}
-                        onPress={() => {
-                          setSelectedRegionIndex(index);
-                          setEditedValue(
-                            parseNumericValue(region.text)?.toString() ?? "",
-                          );
-                        }}
-                        style={[
-                          styles.textRegion,
-                          selectedRegionIndex === index &&
-                            styles.selectedTextRegion,
-                          {
-                            left:
-                              transform.offsetX +
-                              region.bounds.x * transform.scale,
-                            top:
-                              transform.offsetY +
-                              region.bounds.y * transform.scale,
-                            width: region.bounds.width * transform.scale,
-                            height: region.bounds.height * transform.scale,
-                          },
-                        ]}
-                      />
-                    );
-                  })}
+                  {containerSize &&
+                    textRegions.map((region, index) => {
+                      const transform = getContainTransform(
+                        imageSize.width,
+                        imageSize.height,
+                        containerSize.width,
+                        containerSize.height,
+                      );
+
+                      return (
+                        <Pressable
+                          key={`${region.text}-${index}`}
+                          onPress={() => {
+                            setSelectedRegionIndex(index);
+                            setEditedValue(
+                              parseNumericValue(region.text)?.toString() ?? "",
+                            );
+                          }}
+                          style={[
+                            styles.textRegion,
+                            selectedRegionIndex === index &&
+                              styles.selectedTextRegion,
+                            {
+                              left:
+                                transform.offsetX +
+                                region.bounds.x * transform.scale,
+                              top:
+                                transform.offsetY +
+                                region.bounds.y * transform.scale,
+                              width: region.bounds.width * transform.scale,
+                              height: region.bounds.height * transform.scale,
+                            },
+                          ]}
+                        />
+                      );
+                    })}
+                </View>
               </View>
             )}
 
             {(selectedRegion || manualEntry) && (
               <View style={styles.selectedValue}>
-                <Text style={styles.selectedValueLabel}>
-                  {manualEntry ? "Enter value" : "Selected value"}
-                </Text>
-
-                {selectedRegion && (
-                  <Text style={styles.selectedValueText}>
-                    {selectedRegion.text}
+                <View style={styles.selectedValueHeader}>
+                  <Text style={styles.sectionEyebrow}>
+                    {manualEntry ? "MANUAL ENTRY" : "SELECTED READING"}
                   </Text>
+                  <Check size={20} strokeWidth={2} color="#2563EB" />
+                </View>
+
+                {!manualEntry && selectedRegion && (
+                  <View style={styles.valueTransformation}>
+                    <View style={styles.valueStage}>
+                      <Text style={styles.valueStageLabel}>
+                        Recognized text
+                      </Text>
+                      <View style={styles.valueStageBox}>
+                        <Text
+                          style={styles.recognizedText}
+                          numberOfLines={1}
+                          adjustsFontSizeToFit
+                        >
+                          {selectedRegion.text}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <Text style={styles.valueArrow}>→</Text>
+
+                    <View style={styles.valueStage}>
+                      <Text style={styles.valueStageLabel}>Numeric value</Text>
+                      <View style={styles.extractedValueBox}>
+                        <Text style={styles.extractedValueText}>
+                          {parseNumericValue(selectedRegion.text)?.toString() ??
+                            "—"}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
                 )}
+
+                <Text style={styles.editValueLabel}>
+                  {manualEntry ? "Enter value" : "Edit value"}
+                </Text>
 
                 <TextInput
                   value={editedValue}
@@ -442,22 +511,21 @@ export default function App() {
                   keyboardType="decimal-pad"
                   style={styles.valueInput}
                   selectTextOnFocus
+                  placeholder="Enter value"
+                  placeholderTextColor="#999"
                 />
 
                 <Pressable style={styles.saveButton} onPress={handleSaveValue}>
-                  <Text style={styles.saveButtonText}>Save Value</Text>
+                  <Check size={18} strokeWidth={2.2} color="#fff" />
+                  <Text style={styles.saveButtonText}>Save measurement</Text>
                 </Pressable>
               </View>
             )}
 
-            <Text style={styles.captureStatus}>
-              {activeObservation.captures.length === 0
-                ? "No measurements recorded"
-                : `${activeObservation.captures.length} measurement(s)`}
-            </Text>
-
             {cameraStatus && (
-              <Text style={styles.cameraStatus}>{cameraStatus}</Text>
+              <View style={styles.statusMessage}>
+                <Text style={styles.cameraStatus}>{cameraStatus}</Text>
+              </View>
             )}
 
             {cameraStatus &&
@@ -471,43 +539,63 @@ export default function App() {
                   }}
                 >
                   <Text style={styles.manualEntryButtonText}>
-                    Enter Value Manually
+                    Enter value manually
                   </Text>
                 </Pressable>
               )}
 
-            <Pressable style={styles.button} onPress={handleAddMeasurement}>
-              <Text style={styles.buttonText}>Add Measurement</Text>
-            </Pressable>
+            <View style={styles.measurementsSection}>
+              <View style={styles.measurementsHeader}>
+                <View>
+                  <Text style={styles.measurementsTitle}>Measurements</Text>
+                  <Text style={styles.measurementsSubtitle}>
+                    {activeObservation.captures.length === 0
+                      ? "No measurements recorded yet"
+                      : `${activeObservation.captures.length} recorded`}
+                  </Text>
+                </View>
 
-            {activeObservation.captures.length > 0 && (
-              <View style={styles.measurements}>
-                <Text style={styles.measurementsTitle}>Measurements</Text>
+                <View style={styles.measurementCount}>
+                  <Text style={styles.measurementCountText}>
+                    {activeObservation.captures.length}
+                  </Text>
+                </View>
+              </View>
 
-                {activeObservation.captures.map((capture) =>
-                  capture.fieldValues.map((fieldValue, index) => (
-                    <View
-                      key={`${capture.id}-${index}`}
-                      style={styles.measurementWrapper}
-                    >
-                      <Card>
+              {activeObservation.captures.length > 0 && (
+                <View style={styles.measurementList}>
+                  {activeObservation.captures.map((capture) =>
+                    capture.fieldValues.map((fieldValue, index) => (
+                      <View
+                        key={`${capture.id}-${index}`}
+                        style={styles.measurementRow}
+                      >
+                        <Text style={styles.measurementIndex}>{index + 1}</Text>
                         <Text style={styles.measurementValue}>
                           {fieldValue.value}
                         </Text>
-                      </Card>
-                    </View>
-                  )),
-                )}
-              </View>
-            )}
+                      </View>
+                    )),
+                  )}
+                </View>
+              )}
+
+              <Pressable
+                style={styles.addMeasurementButton}
+                onPress={handleAddMeasurement}
+              >
+                <Plus size={18} strokeWidth={2.2} color="#2563EB" />
+                <Text style={styles.addMeasurementButtonText}>
+                  Add another measurement
+                </Text>
+              </Pressable>
+            </View>
 
             <Pressable
               style={styles.doneButton}
               onPress={handleCloseObservation}
             >
-              <Text style={styles.doneButtonText}>
-                {capturedImageUri ? "Done" : "Back"}
-              </Text>
+              <Text style={styles.doneButtonText}>Done</Text>
             </Pressable>
           </View>
         )}
@@ -725,26 +813,37 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
-  button: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 8,
-    backgroundColor: "#222",
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "500",
-  },
   activeObservation: {
-    marginTop: 40,
+    marginTop: 8,
+  },
+  observationHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  headerBackButton: {
+    width: 40,
+    height: 40,
+    marginRight: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 20,
+    backgroundColor: "#ECEEF1",
+  },
+  observationHeaderText: {
+    flex: 1,
+  },
+  activeTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    letterSpacing: -0.3,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: "600",
   },
   timestamp: {
+    marginTop: 3,
     fontSize: 14,
     color: "#666",
   },
@@ -779,12 +878,35 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
   },
+  imageSection: {
+    padding: 14,
+    borderRadius: 14,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#E3E5E8",
+  },
+  imageHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  imageTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  imageHint: {
+    marginTop: 2,
+    fontSize: 13,
+    color: "#777",
+  },
   imageContainer: {
     width: "100%",
-    height: 300,
-    marginTop: 24,
+    height: 270,
     position: "relative",
     overflow: "hidden",
+    borderRadius: 10,
+    backgroundColor: "#F1F2F4",
   },
   textRegion: {
     position: "absolute",
@@ -796,74 +918,192 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 102, 0, 0.15)",
   },
   selectedValue: {
-    marginTop: 24,
+    marginTop: 18,
+    padding: 16,
+    borderRadius: 14,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#D9E2FF",
   },
-
-  selectedValueLabel: {
-    fontSize: 14,
+  selectedValueHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  sectionEyebrow: {
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    color: "#2563EB",
+  },
+  valueTransformation: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 8,
+    marginTop: 16,
+  },
+  valueStage: {
+    flex: 1,
+    minWidth: 0,
+  },
+  valueStageLabel: {
+    marginBottom: 7,
+    fontSize: 13,
     color: "#666",
-    marginBottom: 4,
   },
-
-  selectedValueText: {
-    fontSize: 24,
-    fontWeight: "600",
+  valueStageBox: {
+    height: 54,
+    paddingHorizontal: 12,
+    alignItems: "flex-start",
+    justifyContent: "center",
+    borderRadius: 9,
+    backgroundColor: "#F7F7F8",
   },
-
-  parsedValue: {
-    marginTop: 4,
-    fontSize: 14,
+  recognizedText: {
+    width: "100%",
+    fontSize: 19,
+    color: "#222",
+  },
+  valueArrow: {
+    paddingBottom: 14,
+    fontSize: 26,
+    color: "#777",
+  },
+  extractedValueBox: {
+    height: 54,
+    paddingHorizontal: 12,
+    alignItems: "flex-start",
+    justifyContent: "center",
+    borderRadius: 9,
+    backgroundColor: "#EEF2FF",
+  },
+  extractedValueText: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#222",
+  },
+  editValueLabel: {
+    marginTop: 16,
+    marginBottom: 7,
+    fontSize: 13,
     color: "#666",
   },
   saveButton: {
-    alignSelf: "flex-start",
-    marginTop: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: "#222",
+    alignSelf: "stretch",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 12,
+    paddingVertical: 13,
+    borderRadius: 9,
+    backgroundColor: "#2563EB",
   },
   saveButtonText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "500",
+    fontWeight: "600",
   },
   valueInput: {
-    marginTop: 12,
+    marginTop: 14,
     borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderColor: "#C9CDD3",
+    borderRadius: 9,
+    paddingHorizontal: 13,
+    paddingVertical: 11,
     fontSize: 20,
+    backgroundColor: "#FAFAFB",
   },
-  measurements: {
+  statusMessage: {
+    marginTop: 14,
+    paddingHorizontal: 2,
+  },
+  measurementsSection: {
     marginTop: 24,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: "#E2E4E7",
   },
-  measurementWrapper: {
-    marginBottom: 8,
+  measurementsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   measurementsTitle: {
     fontSize: 18,
     fontWeight: "600",
-    marginBottom: 12,
+  },
+  measurementsSubtitle: {
+    marginTop: 3,
+    fontSize: 13,
+    color: "#777",
+  },
+  measurementCount: {
+    minWidth: 32,
+    height: 32,
+    paddingHorizontal: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 16,
+    backgroundColor: "#EEF2FF",
+  },
+  measurementCountText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#2563EB",
+  },
+  measurementList: {
+    marginTop: 12,
+    gap: 8,
+  },
+  measurementRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    minHeight: 48,
+    paddingHorizontal: 12,
+    borderRadius: 9,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#E3E5E8",
+  },
+  measurementIndex: {
+    width: 28,
+    fontSize: 13,
+    color: "#888",
   },
   measurementValue: {
-    fontSize: 20,
+    fontSize: 19,
+    fontWeight: "600",
+  },
+  addMeasurementButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    marginTop: 12,
+    paddingVertical: 12,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: "#B9C9F7",
+    backgroundColor: "#F8FAFF",
+  },
+  addMeasurementButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#2563EB",
   },
   doneButton: {
-    alignSelf: "flex-start",
-    marginTop: 24,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#222",
+    alignSelf: "stretch",
+    marginTop: 20,
+    paddingVertical: 13,
+    alignItems: "center",
+    borderRadius: 9,
+    backgroundColor: "#222",
   },
-
   doneButtonText: {
+    color: "#fff",
     fontSize: 16,
-    fontWeight: "500",
+    fontWeight: "600",
   },
   observationDetails: {
     flex: 1,
