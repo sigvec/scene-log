@@ -2,6 +2,7 @@ import { StatusBar } from "expo-status-bar";
 import * as ImagePicker from "expo-image-picker";
 import { useEffect, useState } from "react";
 import {
+  Alert,
   Image,
   KeyboardAvoidingView,
   Pressable,
@@ -23,7 +24,10 @@ import {
   loadObservations,
   saveObservations,
 } from "./src/services/storage/observationStorage";
-import { copyImageToStorage } from "./src/services/storage/imageStorage";
+import {
+  copyImageToStorage,
+  deleteImageFromStorage,
+} from "./src/services/storage/imageStorage";
 
 function getContainTransform(
   imageWidth: number,
@@ -235,6 +239,40 @@ export default function App() {
     setTextRegions([]);
     setSelectedRegionIndex(null);
     setEditedValue("");
+  }
+
+  function handleDeleteObservation() {
+    if (!reviewObservation) {
+      return;
+    }
+
+    Alert.alert(
+      "Delete observation?",
+      "This observation and its captured image will be permanently deleted.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            if (reviewObservation.imageUri) {
+              deleteImageFromStorage(reviewObservation.imageUri);
+            }
+
+            setObservations((current) =>
+              current.filter(
+                (observation) => observation.id !== reviewObservation.id,
+              ),
+            );
+
+            setReviewObservation(null);
+          },
+        },
+      ],
+    );
   }
 
   async function handleCapture() {
@@ -520,6 +558,13 @@ export default function App() {
               onPress={() => setReviewObservation(null)}
             >
               <Text style={styles.doneButtonText}>Back</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.deleteButton}
+              onPress={handleDeleteObservation}
+            >
+              <Text style={styles.deleteButtonText}>Delete Observation</Text>
             </Pressable>
           </View>
         )}
@@ -902,5 +947,18 @@ const styles = StyleSheet.create({
   manualEntryButtonText: {
     fontSize: 15,
     fontWeight: "500",
+  },
+  deleteButton: {
+    alignSelf: "flex-start",
+    marginTop: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 8,
+  },
+
+  deleteButtonText: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#B42318",
   },
 });
