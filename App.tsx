@@ -165,12 +165,19 @@ export default function App() {
       );
     }
 
-    const regions = await recognizeText(asset.uri);
-    setTextRegions(regions);
+    try {
+      const regions = await recognizeText(asset.uri);
+      setTextRegions(regions);
 
-    if (regions.length === 0) {
+      if (regions.length === 0) {
+        setCameraStatus(
+          "No text was detected. You can enter the measurement manually.",
+        );
+      }
+    } catch {
+      setTextRegions([]);
       setCameraStatus(
-        "No text was detected. You can enter the measurement manually.",
+        "Text recognition failed. You can enter the measurement manually.",
       );
     }
   }
@@ -415,19 +422,21 @@ export default function App() {
               <Text style={styles.cameraStatus}>{cameraStatus}</Text>
             )}
 
-            {cameraStatus?.startsWith("No text") && (
-              <Pressable
-                style={styles.manualEntryButton}
-                onPress={() => {
-                  setManualEntry(true);
-                  setEditedValue("");
-                }}
-              >
-                <Text style={styles.manualEntryButtonText}>
-                  Enter Value Manually
-                </Text>
-              </Pressable>
-            )}
+            {cameraStatus &&
+              (cameraStatus.startsWith("No text") ||
+                cameraStatus.startsWith("Text recognition failed")) && (
+                <Pressable
+                  style={styles.manualEntryButton}
+                  onPress={() => {
+                    setManualEntry(true);
+                    setEditedValue("");
+                  }}
+                >
+                  <Text style={styles.manualEntryButtonText}>
+                    Enter Value Manually
+                  </Text>
+                </Pressable>
+              )}
 
             <Pressable style={styles.button} onPress={handleAddMeasurement}>
               <Text style={styles.buttonText}>Add Measurement</Text>
