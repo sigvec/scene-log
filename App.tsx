@@ -70,6 +70,10 @@ function parseNumericValue(text: string): number | null {
   return Number.isFinite(value) ? value : null;
 }
 
+function isLikelyMeasurement(region: TextRegion): boolean {
+  return parseNumericValue(region.text) !== null;
+}
+
 export default function App() {
   const [observations, setObservations] = useState<Observation[]>([]);
   const [activeObservation, setActiveObservation] =
@@ -441,6 +445,8 @@ export default function App() {
                           }}
                           style={[
                             styles.textRegion,
+                            !isLikelyMeasurement(region) &&
+                              styles.secondaryTextRegion,
                             selectedRegionIndex === index &&
                               styles.selectedTextRegion,
                             {
@@ -912,6 +918,10 @@ const styles = StyleSheet.create({
     position: "absolute",
     borderWidth: 2,
     borderColor: "#00aaff",
+  },
+  secondaryTextRegion: {
+    borderColor: "rgba(0, 170, 255, 0.25)",
+    borderWidth: 1,
   },
   selectedTextRegion: {
     borderColor: "#ff6600",
