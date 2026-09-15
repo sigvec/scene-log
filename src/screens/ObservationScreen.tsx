@@ -107,6 +107,10 @@ export function ObservationScreen({
 }: ObservationScreenProps) {
   const selectedRegion =
     selectedRegionIndex !== null ? textRegions[selectedRegionIndex] : null;
+  const measurementCount = observation.captures.reduce(
+    (count, capture) => count + capture.fieldValues.length,
+    0,
+  );
 
   return (
     <View style={styles.activeObservation}>
@@ -291,20 +295,18 @@ export function ObservationScreen({
             <Text style={styles.measurementsTitle}>Measurements</Text>
 
             <Text style={styles.measurementsSubtitle}>
-              {observation.captures.length === 0
+              {measurementCount === 0
                 ? "No measurements recorded yet"
-                : `${observation.captures.length} recorded`}
+                : `${measurementCount} recorded`}
             </Text>
           </View>
 
           <View style={styles.measurementCount}>
-            <Text style={styles.measurementCountText}>
-              {observation.captures.length}
-            </Text>
+            <Text style={styles.measurementCountText}>{measurementCount}</Text>
           </View>
         </View>
 
-        {observation.captures.length > 0 && (
+        {measurementCount > 0 && (
           <View style={styles.measurementList}>
             {observation.captures
               .flatMap((capture) =>
