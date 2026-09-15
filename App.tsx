@@ -243,6 +243,58 @@ export default function App() {
     await captureImage(activeObservation);
   }
 
+  function handleDeleteMeasurement(captureId: string, fieldValueIndex: number) {
+    if (!activeObservation) {
+      return;
+    }
+
+    Alert.alert(
+      "Delete measurement?",
+      "This measurement will be permanently deleted.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            const updatedObservation: Observation = {
+              ...activeObservation,
+              captures: activeObservation.captures
+                .map((capture) =>
+                  capture.id === captureId
+                    ? {
+                        ...capture,
+                        fieldValues: capture.fieldValues.filter(
+                          (_, index) => index !== fieldValueIndex,
+                        ),
+                      }
+                    : capture,
+                )
+                .filter((capture) => capture.fieldValues.length > 0),
+            };
+
+            setActiveObservation(updatedObservation);
+
+            setObservations((current) =>
+              current.map((observation) =>
+                observation.id === updatedObservation.id
+                  ? updatedObservation
+                  : observation,
+              ),
+            );
+
+            setEditingMeasurement(null);
+            setEditedValue("");
+            setManualEntry(false);
+          },
+        },
+      ],
+    );
+  }
+
   function handleCloseObservation() {
     setActiveObservation(null);
     setCapturedImageUri(null);
@@ -363,6 +415,7 @@ export default function App() {
             onCaptureWithCamera={handleAddMeasurement}
             onEditMeasurement={handleStartEditingMeasurement}
             onSaveEditedMeasurement={handleSaveEditedMeasurement}
+            onDeleteMeasurement={handleDeleteMeasurement}
           />
         )}
 

@@ -42,6 +42,7 @@ interface ObservationScreenProps {
     value: number,
   ) => void;
   onSaveEditedMeasurement: () => void;
+  onDeleteMeasurement: (captureId: string, fieldValueIndex: number) => void;
 }
 
 function getContainTransform(
@@ -102,6 +103,7 @@ export function ObservationScreen({
   onCaptureWithCamera,
   onEditMeasurement,
   onSaveEditedMeasurement,
+  onDeleteMeasurement,
 }: ObservationScreenProps) {
   const selectedRegion =
     selectedRegionIndex !== null ? textRegions[selectedRegionIndex] : null;
@@ -317,25 +319,40 @@ export function ObservationScreen({
                   { capture, fieldValue, fieldValueIndex },
                   measurementIndex,
                 ) => (
-                  <Pressable
+                  <View
                     key={`${capture.id}-${fieldValueIndex}`}
                     style={styles.measurementRow}
-                    onPress={() =>
-                      onEditMeasurement(
-                        capture.id,
-                        fieldValueIndex,
-                        fieldValue.value,
-                      )
-                    }
                   >
-                    <Text style={styles.measurementIndex}>
-                      {measurementIndex + 1}
-                    </Text>
+                    <Pressable
+                      style={styles.measurementEditArea}
+                      onPress={() =>
+                        onEditMeasurement(
+                          capture.id,
+                          fieldValueIndex,
+                          fieldValue.value,
+                        )
+                      }
+                    >
+                      <Text style={styles.measurementIndex}>
+                        {measurementIndex + 1}
+                      </Text>
 
-                    <Text style={styles.measurementValue}>
-                      {fieldValue.value}
-                    </Text>
-                  </Pressable>
+                      <Text style={styles.measurementValue}>
+                        {fieldValue.value}
+                      </Text>
+                    </Pressable>
+
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Delete measurement ${measurementIndex + 1}`}
+                      hitSlop={8}
+                      onPress={() =>
+                        onDeleteMeasurement(capture.id, fieldValueIndex)
+                      }
+                    >
+                      <Text style={styles.deleteMeasurementText}>×</Text>
+                    </Pressable>
+                  </View>
                 ),
               )}
           </View>
@@ -644,7 +661,14 @@ const styles = StyleSheet.create({
     color: "#888",
   },
 
+  measurementEditArea: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
   measurementValue: {
+    flex: 1,
     fontSize: 19,
     fontWeight: "600",
   },
@@ -720,6 +744,11 @@ const styles = StyleSheet.create({
 
   manualEntryButtonText: {
     fontSize: 15,
+    fontWeight: "500",
+  },
+  deleteMeasurementText: {
+    fontSize: 20,
+    color: "#999",
     fontWeight: "500",
   },
 });
