@@ -45,6 +45,10 @@ export default function App() {
     null,
   );
   const [editedValue, setEditedValue] = useState("");
+  const [editingMeasurement, setEditingMeasurement] = useState<{
+    captureId: string;
+    fieldValueIndex: number;
+  } | null>(null);
 
   function handleSaveValue() {
     if (!activeObservation) {
@@ -80,6 +84,60 @@ export default function App() {
     );
 
     setSelectedRegionIndex(null);
+    setEditedValue("");
+    setManualEntry(false);
+  }
+
+  function handleStartEditingMeasurement(
+    captureId: string,
+    fieldValueIndex: number,
+    value: number,
+  ) {
+    setEditingMeasurement({ captureId, fieldValueIndex });
+    setSelectedRegionIndex(null);
+    setManualEntry(true);
+    setCameraStatus(null);
+    setEditedValue(value.toString());
+  }
+
+  function handleSaveEditedMeasurement() {
+    if (!activeObservation || !editingMeasurement) {
+      return;
+    }
+
+    const value = Number(editedValue);
+
+    if (!Number.isFinite(value)) {
+      return;
+    }
+
+    const updatedObservation: Observation = {
+      ...activeObservation,
+      captures: activeObservation.captures.map((capture) =>
+        capture.id === editingMeasurement.captureId
+          ? {
+              ...capture,
+              fieldValues: capture.fieldValues.map((fieldValue, index) =>
+                index === editingMeasurement.fieldValueIndex
+                  ? { ...fieldValue, value }
+                  : fieldValue,
+              ),
+            }
+          : capture,
+      ),
+    };
+
+    setActiveObservation(updatedObservation);
+
+    setObservations((current) =>
+      current.map((observation) =>
+        observation.id === updatedObservation.id
+          ? updatedObservation
+          : observation,
+      ),
+    );
+
+    setEditingMeasurement(null);
     setEditedValue("");
     setManualEntry(false);
   }
@@ -164,6 +222,7 @@ export default function App() {
     setObservations((current) => [...current, observation]);
     setActiveObservation(observation);
     setCapturedImageUri(null);
+    setEditingMeasurement(null);
   }
 
   async function handleAddMeasurement() {
@@ -179,6 +238,7 @@ export default function App() {
     setSelectedRegionIndex(null);
     setEditedValue("");
     setCapturedImageUri(null);
+    setEditingMeasurement(null);
 
     await captureImage(activeObservation);
   }
@@ -191,6 +251,7 @@ export default function App() {
     setTextRegions([]);
     setSelectedRegionIndex(null);
     setEditedValue("");
+    setEditingMeasurement(null);
   }
 
   function handleDeleteObservation() {
@@ -278,6 +339,7 @@ export default function App() {
             editedValue={editedValue}
             cameraStatus={cameraStatus}
             manualEntry={manualEntry}
+            editingMeasurement={editingMeasurement !== null}
             onClose={handleCloseObservation}
             onContainerLayout={(width, height) => {
               setContainerSize({ width, height });
@@ -299,6 +361,8 @@ export default function App() {
               setCameraStatus(null);
             }}
             onCaptureWithCamera={handleAddMeasurement}
+            onEditMeasurement={handleStartEditingMeasurement}
+            onSaveEditedMeasurement={handleSaveEditedMeasurement}
           />
         )}
 

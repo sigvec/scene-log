@@ -27,6 +27,7 @@ interface ObservationScreenProps {
   editedValue: string;
   cameraStatus: string | null;
   manualEntry: boolean;
+  editingMeasurement: boolean;
   onClose: () => void;
   onContainerLayout: (width: number, height: number) => void;
   onSelectRegion: (index: number, value: string) => void;
@@ -35,6 +36,12 @@ interface ObservationScreenProps {
   onManualEntry: () => void;
   onAddManualMeasurement: () => void;
   onCaptureWithCamera: () => void;
+  onEditMeasurement: (
+    captureId: string,
+    fieldValueIndex: number,
+    value: number,
+  ) => void;
+  onSaveEditedMeasurement: () => void;
 }
 
 function getContainTransform(
@@ -84,6 +91,7 @@ export function ObservationScreen({
   editedValue,
   cameraStatus,
   manualEntry,
+  editingMeasurement,
   onClose,
   onContainerLayout,
   onSelectRegion,
@@ -92,6 +100,8 @@ export function ObservationScreen({
   onManualEntry,
   onAddManualMeasurement,
   onCaptureWithCamera,
+  onEditMeasurement,
+  onSaveEditedMeasurement,
 }: ObservationScreenProps) {
   const selectedRegion =
     selectedRegionIndex !== null ? textRegions[selectedRegionIndex] : null;
@@ -228,7 +238,11 @@ export function ObservationScreen({
           )}
 
           <Text style={styles.editValueLabel}>
-            {manualEntry ? "Enter value" : "Edit value"}
+            {editingMeasurement
+              ? "Edit measurement"
+              : manualEntry
+                ? "Enter value"
+                : "Edit value"}
           </Text>
 
           <TextInput
@@ -241,9 +255,14 @@ export function ObservationScreen({
             placeholderTextColor="#999"
           />
 
-          <Pressable style={styles.saveButton} onPress={onSaveValue}>
+          <Pressable
+            style={styles.saveButton}
+            onPress={editingMeasurement ? onSaveEditedMeasurement : onSaveValue}
+          >
             <Check size={18} strokeWidth={2.2} color="#fff" />
-            <Text style={styles.saveButtonText}>Save measurement</Text>
+            <Text style={styles.saveButtonText}>
+              {editingMeasurement ? "Save changes" : "Save measurement"}
+            </Text>
           </Pressable>
         </View>
       )}
@@ -285,20 +304,40 @@ export function ObservationScreen({
 
         {observation.captures.length > 0 && (
           <View style={styles.measurementList}>
-            {observation.captures.map((capture) =>
-              capture.fieldValues.map((fieldValue, index) => (
-                <View
-                  key={`${capture.id}-${index}`}
-                  style={styles.measurementRow}
-                >
-                  <Text style={styles.measurementIndex}>{index + 1}</Text>
+            {observation.captures
+              .flatMap((capture) =>
+                capture.fieldValues.map((fieldValue, index) => ({
+                  capture,
+                  fieldValue,
+                  fieldValueIndex: index,
+                })),
+              )
+              .map(
+                (
+                  { capture, fieldValue, fieldValueIndex },
+                  measurementIndex,
+                ) => (
+                  <Pressable
+                    key={`${capture.id}-${fieldValueIndex}`}
+                    style={styles.measurementRow}
+                    onPress={() =>
+                      onEditMeasurement(
+                        capture.id,
+                        fieldValueIndex,
+                        fieldValue.value,
+                      )
+                    }
+                  >
+                    <Text style={styles.measurementIndex}>
+                      {measurementIndex + 1}
+                    </Text>
 
-                  <Text style={styles.measurementValue}>
-                    {fieldValue.value}
-                  </Text>
-                </View>
-              )),
-            )}
+                    <Text style={styles.measurementValue}>
+                      {fieldValue.value}
+                    </Text>
+                  </Pressable>
+                ),
+              )}
           </View>
         )}
 
