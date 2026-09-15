@@ -198,9 +198,9 @@ export default function App() {
     }
   }
 
-  async function handleNewObservation() {
+  function handleNewObservation() {
     setCameraStatus(null);
-    setManualEntry(false);
+    setManualEntry(true);
     const observation = createObservation();
 
     setImageSize(null);
@@ -212,8 +212,6 @@ export default function App() {
     setObservations((current) => [...current, observation]);
     setActiveObservation(observation);
     setCapturedImageUri(null);
-
-    await captureImage(observation);
   }
 
   async function handleAddMeasurement() {
@@ -586,13 +584,30 @@ export default function App() {
                 </View>
               )}
 
+              {!manualEntry && (
+                <Pressable
+                  style={styles.addMeasurementButton}
+                  onPress={() => {
+                    setManualEntry(true);
+                    setSelectedRegionIndex(null);
+                    setEditedValue("");
+                    setCameraStatus(null);
+                  }}
+                >
+                  <Plus size={18} strokeWidth={2.2} color="#2563EB" />
+                  <Text style={styles.addMeasurementButtonText}>
+                    Add measurement
+                  </Text>
+                </Pressable>
+              )}
+
               <Pressable
-                style={styles.addMeasurementButton}
+                style={styles.captureMeasurementButton}
                 onPress={handleAddMeasurement}
               >
-                <Plus size={18} strokeWidth={2.2} color="#2563EB" />
-                <Text style={styles.addMeasurementButtonText}>
-                  Add another measurement
+                <Camera size={18} strokeWidth={2.2} color="#666" />
+                <Text style={styles.captureMeasurementButtonText}>
+                  Capture with camera
                 </Text>
               </Pressable>
             </View>
@@ -1101,6 +1116,24 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: "#2563EB",
+  },
+  captureMeasurementButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    marginTop: 8,
+    paddingVertical: 12,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: "#D4D6DA",
+    backgroundColor: "#fff",
+  },
+
+  captureMeasurementButtonText: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#666",
   },
   doneButton: {
     alignSelf: "stretch",
