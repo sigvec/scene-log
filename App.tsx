@@ -28,6 +28,7 @@ import {
   copyImageToStorage,
   deleteImageFromStorage,
 } from "./src/services/storage/imageStorage";
+import { ObservationReviewScreen } from "./src/screens/ObservationReviewScreen";
 
 export default function App() {
   const [observations, setObservations] = useState<Observation[]>([]);
@@ -363,60 +364,11 @@ export default function App() {
         )}
 
         {reviewObservation && (
-          <View style={styles.reviewObservation}>
-            <Text style={styles.reviewTitle}>Observation</Text>
-
-            <Text style={styles.reviewTimestamp}>
-              {reviewObservation.createdAt.toLocaleTimeString()}
-            </Text>
-
-            {reviewObservation.imageUri && (
-              <Image
-                source={{ uri: reviewObservation.imageUri }}
-                style={styles.reviewImage}
-                resizeMode="contain"
-              />
-            )}
-
-            <View style={styles.reviewSection}>
-              <Text style={styles.reviewSectionTitle}>Measurements</Text>
-
-              {reviewObservation.captures.length > 0 ? (
-                <View style={styles.reviewValues}>
-                  {reviewObservation.captures.flatMap((capture) =>
-                    capture.fieldValues.map((fieldValue, index) => (
-                      <View
-                        key={`${capture.id}-${index}`}
-                        style={styles.valuePill}
-                      >
-                        <Text style={styles.valuePillText}>
-                          {fieldValue.value}
-                        </Text>
-                      </View>
-                    )),
-                  )}
-                </View>
-              ) : (
-                <Text style={styles.reviewEmpty}>
-                  No measurements recorded.
-                </Text>
-              )}
-            </View>
-
-            <Pressable
-              style={styles.primaryActionButton}
-              onPress={() => setReviewObservation(null)}
-            >
-              <Text style={styles.primaryActionButtonText}>Back</Text>
-            </Pressable>
-
-            <Pressable
-              style={styles.deleteButton}
-              onPress={handleDeleteObservation}
-            >
-              <Text style={styles.deleteButtonText}>Delete Observation</Text>
-            </Pressable>
-          </View>
+          <ObservationReviewScreen
+            observation={reviewObservation}
+            onBack={() => setReviewObservation(null)}
+            onDelete={handleDeleteObservation}
+          />
         )}
 
         {!activeObservation && !reviewObservation && (
@@ -544,20 +496,17 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     backgroundColor: "#F0F1F3",
   },
-
   emptyStateTitle: {
     fontSize: 22,
     fontWeight: "600",
     marginBottom: 8,
   },
-
   emptyStateText: {
     fontSize: 15,
     lineHeight: 22,
     color: "#666",
     marginBottom: 24,
   },
-
   primaryButton: {
     alignSelf: "flex-start",
     flexDirection: "row",
@@ -610,94 +559,23 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#666",
   },
-  primaryActionButton: {
-    alignSelf: "stretch",
-    marginTop: 20,
-    paddingVertical: 13,
-    alignItems: "center",
-    borderRadius: 9,
-    backgroundColor: "#222",
-  },
-  primaryActionButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
   observationDetails: {
     flex: 1,
   },
-
   measurementValues: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
     marginTop: 16,
   },
-
   valuePill: {
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 16,
     backgroundColor: "#EEF2FF",
   },
-
   valuePillText: {
     fontSize: 15,
     fontWeight: "600",
-  },
-  reviewValues: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 12,
-  },
-  reviewObservation: {
-    marginTop: 40,
-  },
-
-  reviewTitle: {
-    fontSize: 28,
-    fontWeight: "600",
-    letterSpacing: -0.3,
-  },
-
-  reviewTimestamp: {
-    marginTop: 6,
-    fontSize: 14,
-    color: "#666",
-  },
-
-  reviewSection: {
-    marginTop: 32,
-  },
-
-  reviewSectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 12,
-  },
-
-  reviewEmpty: {
-    fontSize: 15,
-    color: "#666",
-  },
-  reviewImage: {
-    width: "100%",
-    height: 300,
-    marginTop: 24,
-    borderRadius: 8,
-  },
-  deleteButton: {
-    alignSelf: "flex-start",
-    marginTop: 12,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 8,
-  },
-
-  deleteButtonText: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#B42318",
   },
 });
