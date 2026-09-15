@@ -183,16 +183,6 @@ export default function App() {
     await captureImage(activeObservation);
   }
 
-  function handleFinishObservation() {
-    setActiveObservation(null);
-    setCapturedImageUri(null);
-    setImageSize(null);
-    setContainerSize(null);
-    setTextRegions([]);
-    setSelectedRegionIndex(null);
-    setEditedValue("");
-  }
-
   function handleCloseObservation() {
     setActiveObservation(null);
     setCapturedImageUri(null);
@@ -236,53 +226,6 @@ export default function App() {
       ],
     );
   }
-
-  async function handleCapture() {
-    const observation = createObservation();
-
-    setImageSize(null);
-    setContainerSize(null);
-    setTextRegions([]);
-    setSelectedRegionIndex(null);
-
-    setObservations((current) => [...current, observation]);
-    setActiveObservation(observation);
-    setCapturedImageUri(null);
-
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-
-    if (!permission.granted) {
-      return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ["images"],
-      quality: 1,
-    });
-
-    if (result.canceled) {
-      return;
-    }
-
-    const asset = result.assets[0];
-
-    setCapturedImageUri(asset.uri);
-    setImageSize({
-      width: asset.width,
-      height: asset.height,
-    });
-
-    const regions = await recognizeText(asset.uri);
-    setTextRegions(regions);
-  }
-
-  const selectedRegion =
-    selectedRegionIndex !== null ? textRegions[selectedRegionIndex] : null;
-
-  const measurementValues = (observation: Observation) =>
-    observation.captures.flatMap((capture) =>
-      capture.fieldValues.map((fieldValue) => fieldValue.value),
-    );
 
   const [reviewObservation, setReviewObservation] =
     useState<Observation | null>(null);
