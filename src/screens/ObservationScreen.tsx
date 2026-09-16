@@ -10,7 +10,7 @@ import {
 
 import type { Observation } from "../domain/observation/Observation";
 import { FIELD_LIST, getFieldById } from "../domain/field/builtInFields";
-import { formatDuration } from "../domain/field/duration";
+import { formatDuration, parseDurationInput } from "../domain/field/duration";
 import type { TextRegion } from "../services/ocr/TextRegion";
 
 interface ObservationScreenProps {
@@ -245,15 +245,18 @@ export function ObservationScreen({
                   <Text style={styles.extractedValueText}>
                     {getFieldById(selectedFieldId).valueType === "duration"
                       ? (() => {
-                          const match =
-                            selectedRegion.text.match(/^(\d+)\.(\d{2})$/);
-                          if (match && Number(match[2]) < 60) {
-                            return `${Number(match[1])}:${match[2]}`;
-                          }
-                          return selectedRegion.text;
+                          const duration = parseDurationInput(
+                            selectedRegion.text,
+                          );
+                          return duration === null
+                            ? "—"
+                            : formatDuration(duration);
                         })()
                       : (parseNumericValue(selectedRegion.text)?.toString() ??
                         "—")}
+                    {getFieldById(selectedFieldId).unit
+                      ? ` ${getFieldById(selectedFieldId).unit}`
+                      : ""}
                   </Text>
                 </View>
               </View>
@@ -281,6 +284,7 @@ export function ObservationScreen({
                   ]}
                 >
                   {field.name}
+                  {field.unit ? ` (${field.unit})` : ""}
                 </Text>
               </Pressable>
             ))}
@@ -292,15 +296,26 @@ export function ObservationScreen({
               : manualEntry
                 ? "Enter value"
                 : "Edit value"}
+            {getFieldById(selectedFieldId).unit
+              ? ` (${getFieldById(selectedFieldId).unit})`
+              : ""}
           </Text>
 
           <TextInput
             value={editedValue}
             onChangeText={onValueChange}
-            keyboardType="decimal-pad"
+            keyboardType={
+              getFieldById(selectedFieldId).valueType === "duration"
+                ? "numbers-and-punctuation"
+                : "decimal-pad"
+            }
             style={styles.valueInput}
             selectTextOnFocus
-            placeholder="Enter value"
+            placeholder={
+              getFieldById(selectedFieldId).valueType === "duration"
+                ? "e.g. 1:30 or 1.30"
+                : "Enter value"
+            }
             placeholderTextColor="#999"
           />
 
@@ -385,12 +400,18 @@ export function ObservationScreen({
 
                       <Text style={styles.measurementField}>
                         {getFieldById(fieldValue.fieldId).name}
+                        {getFieldById(fieldValue.fieldId).unit
+                          ? ` (${getFieldById(fieldValue.fieldId).unit})`
+                          : ""}
                       </Text>
 
                       <Text style={styles.measurementValue}>
                         {fieldValue.valueType === "duration"
                           ? formatDuration(fieldValue.value)
                           : fieldValue.value}
+                        {getFieldById(fieldValue.fieldId).unit
+                          ? ` ${getFieldById(fieldValue.fieldId).unit}`
+                          : ""}
                       </Text>
                     </Pressable>
 

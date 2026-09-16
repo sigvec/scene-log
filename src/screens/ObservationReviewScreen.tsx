@@ -50,6 +50,9 @@ export function ObservationReviewScreen({
                     {getFieldById(fieldValue.fieldId).name}: {fieldValue.valueType === "duration"
                       ? formatDuration(fieldValue.value)
                       : fieldValue.value}
+                    {getFieldById(fieldValue.fieldId).unit
+                      ? ` ${getFieldById(fieldValue.fieldId).unit}`
+                      : ""}
                   </Text>
                 </View>
               )),

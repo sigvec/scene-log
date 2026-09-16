@@ -75,6 +75,13 @@ export default function App() {
     return Number.isFinite(value) ? value : null;
   }
 
+  function formatFieldInput(fieldId: string, value: number): string {
+    const field = getFieldById(fieldId);
+    return field.valueType === "duration"
+      ? formatDuration(value)
+      : value.toString();
+  }
+
   function handleSaveValue() {
     if (!activeObservation) {
       return;
@@ -130,9 +137,7 @@ export default function App() {
     setCameraStatus(null);
     setSelectedFieldId(fieldId);
     const field = getFieldById(fieldId);
-    setEditedValue(
-      field.valueType === "duration" ? formatDuration(value) : value.toString(),
-    );
+    setEditedValue(formatFieldInput(fieldId, value));
   }
 
   function handleSaveEditedMeasurement() {
@@ -434,14 +439,27 @@ export default function App() {
             }}
             selectedFieldId={selectedFieldId}
             onFieldChange={(fieldId: string) => {
+              const nextField = getFieldById(fieldId);
               setSelectedFieldId(fieldId);
+
               if (selectedRegionIndex !== null) {
                 const region = textRegions[selectedRegionIndex];
                 setEditedValue(
-                  getFieldById(fieldId).valueType === "duration"
+                  nextField.valueType === "duration"
                     ? (region?.text ?? "")
                     : parseNumericValueForApp(region?.text ?? ""),
                 );
+                return;
+              }
+
+              if (editedValue) {
+                const currentValue = parseFieldValue(
+                  selectedFieldId,
+                  editedValue,
+                );
+                if (currentValue !== null) {
+                  setEditedValue(formatFieldInput(fieldId, currentValue));
+                }
               }
             }}
             onValueChange={setEditedValue}
