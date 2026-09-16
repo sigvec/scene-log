@@ -1,4 +1,5 @@
 import { createCapture } from "../src/domain/capture/createCapture";
+import type { FieldValue } from "../src/domain/field/FieldValue";
 import { createObservation } from "../src/domain/observation/createObservation";
 import { deserializeObservation } from "../src/domain/observation/deserializeObservation";
 import { serializeObservation } from "../src/domain/observation/serializeObservation";
@@ -24,9 +25,10 @@ describe("createObservation", () => {
 
 describe("createCapture", () => {
   it("creates a capture with the supplied field values", () => {
-    const fieldValues = [
+    const fieldValues: FieldValue[] = [
       {
         fieldId: "value",
+        valueType: "number",
         value: 12.4,
       },
     ];
@@ -59,6 +61,7 @@ describe("observation serialization", () => {
       [
         {
           fieldId: "value",
+          valueType: "number",
           value: 12.4,
         },
       ],
@@ -86,7 +89,9 @@ describe("legacy observation image migration", () => {
         {
           id: "capture-1",
           createdAt: "2026-09-15T00:00:01.000Z",
-          fieldValues: [{ fieldId: "value", value: 12.4 }],
+          fieldValues: [
+            { fieldId: "value", valueType: "number" as const, value: 12.4 },
+          ],
         },
       ],
     };
@@ -113,6 +118,7 @@ describe("observation storage", () => {
         [
           {
             fieldId: "value",
+            valueType: "number",
             value: 12.4,
           },
         ],

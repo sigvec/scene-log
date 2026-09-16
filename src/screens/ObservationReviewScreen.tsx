@@ -1,6 +1,8 @@
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { Observation } from "../domain/observation/Observation";
+import { getFieldById } from "../domain/field/builtInFields";
+import { formatDuration } from "../domain/field/duration";
 
 interface ObservationReviewScreenProps {
   observation: Observation;
@@ -44,7 +46,11 @@ export function ObservationReviewScreen({
             {observation.captures.flatMap((capture) =>
               capture.fieldValues.map((fieldValue, index) => (
                 <View key={`${capture.id}-${index}`} style={styles.valuePill}>
-                  <Text style={styles.valuePillText}>{fieldValue.value}</Text>
+                  <Text style={styles.valuePillText}>
+                    {getFieldById(fieldValue.fieldId).name}: {fieldValue.valueType === "duration"
+                      ? formatDuration(fieldValue.value)
+                      : fieldValue.value}
+                  </Text>
                 </View>
               )),
             )}

@@ -9,6 +9,8 @@ import {
 } from "react-native";
 
 import type { Observation } from "../domain/observation/Observation";
+import { FIELD_LIST, getFieldById } from "../domain/field/builtInFields";
+import { formatDuration } from "../domain/field/duration";
 import type { TextRegion } from "../services/ocr/TextRegion";
 
 interface ObservationScreenProps {
@@ -24,6 +26,7 @@ interface ObservationScreenProps {
   } | null;
   textRegions: TextRegion[];
   selectedRegionIndex: number | null;
+  selectedFieldId: string;
   editedValue: string;
   cameraStatus: string | null;
   manualEntry: boolean;
@@ -31,6 +34,7 @@ interface ObservationScreenProps {
   onClose: () => void;
   onContainerLayout: (width: number, height: number) => void;
   onSelectRegion: (index: number, value: string) => void;
+  onFieldChange: (fieldId: string) => void;
   onValueChange: (value: string) => void;
   onSaveValue: () => void;
   onManualEntry: () => void;
@@ -39,6 +43,7 @@ interface ObservationScreenProps {
   onEditMeasurement: (
     captureId: string,
     fieldValueIndex: number,
+    fieldId: string,
     value: number,
   ) => void;
   onSaveEditedMeasurement: () => void;
@@ -89,6 +94,7 @@ export function ObservationScreen({
   containerSize,
   textRegions,
   selectedRegionIndex,
+  selectedFieldId,
   editedValue,
   cameraStatus,
   manualEntry,
@@ -96,6 +102,7 @@ export function ObservationScreen({
   onClose,
   onContainerLayout,
   onSelectRegion,
+  onFieldChange,
   onValueChange,
   onSaveValue,
   onManualEntry,
@@ -236,12 +243,48 @@ export function ObservationScreen({
 
                 <View style={styles.extractedValueBox}>
                   <Text style={styles.extractedValueText}>
-                    {parseNumericValue(selectedRegion.text)?.toString() ?? "—"}
+                    {getFieldById(selectedFieldId).valueType === "duration"
+                      ? (() => {
+                          const match =
+                            selectedRegion.text.match(/^(\d+)\.(\d{2})$/);
+                          if (match && Number(match[2]) < 60) {
+                            return `${Number(match[1])}:${match[2]}`;
+                          }
+                          return selectedRegion.text;
+                        })()
+                      : (parseNumericValue(selectedRegion.text)?.toString() ??
+                        "—")}
                   </Text>
                 </View>
               </View>
             </View>
           )}
+
+          <Text style={styles.fieldLabel}>Field</Text>
+          <View style={styles.fieldSelector}>
+            {FIELD_LIST.map((field) => (
+              <Pressable
+                key={field.id}
+                accessibilityRole="button"
+                accessibilityState={{ selected: field.id === selectedFieldId }}
+                style={[
+                  styles.fieldOption,
+                  field.id === selectedFieldId && styles.fieldOptionSelected,
+                ]}
+                onPress={() => onFieldChange(field.id)}
+              >
+                <Text
+                  style={[
+                    styles.fieldOptionText,
+                    field.id === selectedFieldId &&
+                      styles.fieldOptionTextSelected,
+                  ]}
+                >
+                  {field.name}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
 
           <Text style={styles.editValueLabel}>
             {editingMeasurement
@@ -331,6 +374,7 @@ export function ObservationScreen({
                         onEditMeasurement(
                           capture.id,
                           fieldValueIndex,
+                          fieldValue.fieldId,
                           fieldValue.value,
                         )
                       }
@@ -339,12 +383,19 @@ export function ObservationScreen({
                         {measurementIndex + 1}
                       </Text>
 
+                      <Text style={styles.measurementField}>
+                        {getFieldById(fieldValue.fieldId).name}
+                      </Text>
+
                       <Text style={styles.measurementValue}>
-                        {fieldValue.value}
+                        {fieldValue.valueType === "duration"
+                          ? formatDuration(fieldValue.value)
+                          : fieldValue.value}
                       </Text>
                     </Pressable>
 
                     <Pressable
+                      style={styles.deleteMeasurementButton}
                       accessibilityRole="button"
                       accessibilityLabel={`Delete measurement ${measurementIndex + 1}`}
                       hitSlop={8}
@@ -560,6 +611,40 @@ const styles = StyleSheet.create({
     color: "#222",
   },
 
+  fieldLabel: {
+    marginTop: 18,
+    marginBottom: 8,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#666",
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+  },
+  fieldSelector: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  fieldOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#D4D4D4",
+    backgroundColor: "#fff",
+  },
+  fieldOptionSelected: {
+    borderColor: "#2563EB",
+    backgroundColor: "#EFF6FF",
+  },
+  fieldOptionText: {
+    fontSize: 14,
+    color: "#555",
+  },
+  fieldOptionTextSelected: {
+    color: "#2563EB",
+    fontWeight: "600",
+  },
   editValueLabel: {
     marginTop: 16,
     marginBottom: 7,
@@ -669,8 +754,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  measurementValue: {
+  measurementField: {
     flex: 1,
+    marginLeft: 10,
+    fontSize: 14,
+    color: "#666",
+  },
+
+  measurementValue: {
     fontSize: 19,
     fontWeight: "600",
   },
@@ -747,6 +838,9 @@ const styles = StyleSheet.create({
   manualEntryButtonText: {
     fontSize: 15,
     fontWeight: "500",
+  },
+  deleteMeasurementButton: {
+    marginLeft: 16,
   },
   deleteMeasurementText: {
     fontSize: 20,

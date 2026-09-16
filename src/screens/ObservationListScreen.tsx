@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Card } from "../components/Card";
 import type { Observation } from "../domain/observation/Observation";
+import { formatDuration } from "../domain/field/duration";
 
 interface ObservationListScreenProps {
   observations: Observation[];
@@ -17,7 +18,11 @@ export function ObservationListScreen({
 }: ObservationListScreenProps) {
   const measurementValues = (observation: Observation) =>
     observation.captures.flatMap((capture) =>
-      capture.fieldValues.map((fieldValue) => fieldValue.value),
+      capture.fieldValues.map((fieldValue) =>
+        fieldValue.valueType === "duration"
+          ? formatDuration(fieldValue.value)
+          : fieldValue.value.toString(),
+      ),
     );
 
   return (

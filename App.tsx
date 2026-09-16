@@ -14,7 +14,14 @@ import { createObservation } from "./src/domain/observation/createObservation";
 import type { TextRegion } from "./src/services/ocr/TextRegion";
 import { recognizeText } from "./src/services/ocr/recognizeText";
 import { createCapture } from "./src/domain/capture/createCapture";
-import { BUILT_IN_FIELDS } from "./src/domain/field/builtInFields";
+import {
+  BUILT_IN_FIELDS,
+  getFieldById,
+} from "./src/domain/field/builtInFields";
+import {
+  formatDuration,
+  parseDurationInput,
+} from "./src/domain/field/duration";
 import {
   loadObservations,
   saveObservations,
@@ -25,6 +32,11 @@ import {
 } from "./src/services/storage/imageStorage";
 import { ObservationReviewScreen } from "./src/screens/ObservationReviewScreen";
 import { ObservationListScreen } from "./src/screens/ObservationListScreen";
+
+function parseNumericValueForApp(text: string): string {
+  const match = text.match(/[-+]?(?:\d+(?:\.\d*)?|\.\d+)/);
+  return match?.[0] ?? "";
+}
 
 export default function App() {
   const [observations, setObservations] = useState<Observation[]>([]);
@@ -45,26 +57,41 @@ export default function App() {
     null,
   );
   const [editedValue, setEditedValue] = useState("");
+  const [selectedFieldId, setSelectedFieldId] = useState(
+    BUILT_IN_FIELDS.value.id,
+  );
   const [editingMeasurement, setEditingMeasurement] = useState<{
     captureId: string;
     fieldValueIndex: number;
   } | null>(null);
+
+  function parseFieldValue(fieldId: string, input: string): number | null {
+    const field = getFieldById(fieldId);
+    if (field.valueType === "duration") {
+      return parseDurationInput(input);
+    }
+
+    const value = Number(input);
+    return Number.isFinite(value) ? value : null;
+  }
 
   function handleSaveValue() {
     if (!activeObservation) {
       return;
     }
 
-    const value = Number(editedValue);
+    const field = getFieldById(selectedFieldId);
+    const value = parseFieldValue(selectedFieldId, editedValue);
 
-    if (!Number.isFinite(value)) {
+    if (value === null) {
       return;
     }
 
     const capture = createCapture(
       [
         {
-          fieldId: BUILT_IN_FIELDS.value.id,
+          fieldId: field.id,
+          valueType: field.valueType,
           value,
         },
       ],
@@ -94,13 +121,18 @@ export default function App() {
   function handleStartEditingMeasurement(
     captureId: string,
     fieldValueIndex: number,
+    fieldId: string,
     value: number,
   ) {
     setEditingMeasurement({ captureId, fieldValueIndex });
     setSelectedRegionIndex(null);
     setManualEntry(true);
     setCameraStatus(null);
-    setEditedValue(value.toString());
+    setSelectedFieldId(fieldId);
+    const field = getFieldById(fieldId);
+    setEditedValue(
+      field.valueType === "duration" ? formatDuration(value) : value.toString(),
+    );
   }
 
   function handleSaveEditedMeasurement() {
@@ -108,9 +140,10 @@ export default function App() {
       return;
     }
 
-    const value = Number(editedValue);
+    const currentField = getFieldById(selectedFieldId);
+    const value = parseFieldValue(selectedFieldId, editedValue);
 
-    if (!Number.isFinite(value)) {
+    if (value === null) {
       return;
     }
 
@@ -122,7 +155,12 @@ export default function App() {
               ...capture,
               fieldValues: capture.fieldValues.map((fieldValue, index) =>
                 index === editingMeasurement.fieldValueIndex
-                  ? { ...fieldValue, value }
+                  ? {
+                      ...fieldValue,
+                      fieldId: currentField.id,
+                      valueType: currentField.valueType,
+                      value,
+                    }
                   : fieldValue,
               ),
             }
@@ -201,6 +239,7 @@ export default function App() {
     setTextRegions([]);
     setSelectedRegionIndex(null);
     setEditedValue("");
+    setSelectedFieldId(BUILT_IN_FIELDS.value.id);
 
     setObservations((current) => [...current, observation]);
     setActiveObservation(observation);
@@ -387,7 +426,23 @@ export default function App() {
             }}
             onSelectRegion={(index, value) => {
               setSelectedRegionIndex(index);
-              setEditedValue(value);
+              setEditedValue(
+                getFieldById(selectedFieldId).valueType === "duration"
+                  ? (textRegions[index]?.text ?? "")
+                  : value,
+              );
+            }}
+            selectedFieldId={selectedFieldId}
+            onFieldChange={(fieldId: string) => {
+              setSelectedFieldId(fieldId);
+              if (selectedRegionIndex !== null) {
+                const region = textRegions[selectedRegionIndex];
+                setEditedValue(
+                  getFieldById(fieldId).valueType === "duration"
+                    ? (region?.text ?? "")
+                    : parseNumericValueForApp(region?.text ?? ""),
+                );
+              }
             }}
             onValueChange={setEditedValue}
             onSaveValue={handleSaveValue}
