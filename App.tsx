@@ -14,7 +14,7 @@ import { createObservation } from "./src/domain/observation/createObservation";
 import type { TextRegion } from "./src/services/ocr/TextRegion";
 import { recognizeText } from "./src/services/ocr/recognizeText";
 import { createCapture } from "./src/domain/capture/createCapture";
-import { BUILT_IN_FIELD_IDS } from "./src/domain/field/builtInFields";
+import { BUILT_IN_FIELDS } from "./src/domain/field/builtInFields";
 import {
   loadObservations,
   saveObservations,
@@ -64,7 +64,7 @@ export default function App() {
     const capture = createCapture(
       [
         {
-          fieldId: BUILT_IN_FIELD_IDS.value,
+          fieldId: BUILT_IN_FIELDS.value.id,
           value,
         },
       ],
