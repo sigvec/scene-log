@@ -7,10 +7,12 @@ export function serializeObservation(
   return {
     id: observation.id,
     createdAt: observation.createdAt.toISOString(),
-    imageUri: observation.imageUri,
     captures: observation.captures.map((capture) => ({
       id: capture.id,
       createdAt: capture.createdAt.toISOString(),
+      ...(capture.sourceImageUri
+        ? { sourceImageUri: capture.sourceImageUri }
+        : {}),
       fieldValues: capture.fieldValues,
     })),
   };

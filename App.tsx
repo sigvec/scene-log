@@ -61,12 +61,15 @@ export default function App() {
       return;
     }
 
-    const capture = createCapture([
-      {
-        fieldId: BUILT_IN_FIELD_IDS.value,
-        value,
-      },
-    ]);
+    const capture = createCapture(
+      [
+        {
+          fieldId: BUILT_IN_FIELD_IDS.value,
+          value,
+        },
+      ],
+      capturedImageUri ?? undefined,
+    );
 
     const updatedObservation: Observation = {
       ...activeObservation,
@@ -142,7 +145,7 @@ export default function App() {
     setManualEntry(false);
   }
 
-  async function captureImage(observation?: Observation) {
+  async function captureImage() {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
 
     if (!permission.granted) {
@@ -163,33 +166,13 @@ export default function App() {
     }
 
     const asset = result.assets[0];
+    const storedImageUri = await copyImageToStorage(asset.uri);
 
-    setCapturedImageUri(asset.uri);
+    setCapturedImageUri(storedImageUri);
     setImageSize({
       width: asset.width,
       height: asset.height,
     });
-
-    const storedImageUri = await copyImageToStorage(asset.uri);
-
-    const currentObservation = observation ?? activeObservation;
-
-    if (currentObservation) {
-      const updatedObservation: Observation = {
-        ...currentObservation,
-        imageUri: storedImageUri,
-      };
-
-      setActiveObservation(updatedObservation);
-
-      setObservations((current) =>
-        current.map((observation) =>
-          observation.id === updatedObservation.id
-            ? updatedObservation
-            : observation,
-        ),
-      );
-    }
 
     try {
       const regions = await recognizeText(asset.uri);
@@ -240,7 +223,7 @@ export default function App() {
     setCapturedImageUri(null);
     setEditingMeasurement(null);
 
-    await captureImage(activeObservation);
+    await captureImage();
   }
 
   function handleDeleteMeasurement(captureId: string, fieldValueIndex: number) {
@@ -323,8 +306,14 @@ export default function App() {
           text: "Delete",
           style: "destructive",
           onPress: () => {
-            if (reviewObservation.imageUri) {
-              deleteImageFromStorage(reviewObservation.imageUri);
+            const imageUris = new Set(
+              reviewObservation.captures
+                .map((capture) => capture.sourceImageUri)
+                .filter((uri): uri is string => Boolean(uri)),
+            );
+
+            for (const imageUri of imageUris) {
+              deleteImageFromStorage(imageUri);
             }
 
             setObservations((current) =>

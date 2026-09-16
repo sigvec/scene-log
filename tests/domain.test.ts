@@ -36,6 +36,7 @@ describe("createCapture", () => {
     expect(capture.id).toEqual(expect.any(String));
     expect(capture.createdAt).toBeInstanceOf(Date);
     expect(capture.fieldValues).toEqual(fieldValues);
+    expect(capture.sourceImageUri).toBeUndefined();
   });
 });
 
@@ -54,15 +55,17 @@ describe("observation serialization", () => {
   it("round-trips an observation without losing its data", () => {
     const observation = createObservation();
 
-    const capture = createCapture([
-      {
-        fieldId: "value",
-        value: 12.4,
-      },
-    ]);
+    const capture = createCapture(
+      [
+        {
+          fieldId: "value",
+          value: 12.4,
+        },
+      ],
+      "file:///data/images/test.jpg",
+    );
 
     observation.captures.push(capture);
-    observation.imageUri = "file:///data/images/test.jpg";
 
     const serialized = serializeObservation(observation);
     const restored = deserializeObservation(serialized);
@@ -70,6 +73,29 @@ describe("observation serialization", () => {
     expect(restored).toEqual(observation);
     expect(restored.createdAt).toBeInstanceOf(Date);
     expect(restored.captures[0].createdAt).toBeInstanceOf(Date);
+  });
+});
+
+describe("legacy observation image migration", () => {
+  it("moves a legacy observation-level image to its captures", () => {
+    const data = {
+      id: "observation-1",
+      createdAt: "2026-09-15T00:00:00.000Z",
+      imageUri: "file:///data/images/legacy.jpg",
+      captures: [
+        {
+          id: "capture-1",
+          createdAt: "2026-09-15T00:00:01.000Z",
+          fieldValues: [{ fieldId: "value", value: 12.4 }],
+        },
+      ],
+    };
+
+    const restored = deserializeObservation(data);
+
+    expect(restored.captures[0].sourceImageUri).toBe(
+      "file:///data/images/legacy.jpg",
+    );
   });
 });
 
@@ -82,14 +108,16 @@ describe("observation storage", () => {
   it("saves and loads observations", async () => {
     const observation = createObservation();
 
-    observation.imageUri = "file:///data/images/test.jpg";
     observation.captures.push(
-      createCapture([
-        {
-          fieldId: "value",
-          value: 12.4,
-        },
-      ]),
+      createCapture(
+        [
+          {
+            fieldId: "value",
+            value: 12.4,
+          },
+        ],
+        "file:///data/images/test.jpg",
+      ),
     );
 
     await saveObservations([observation]);

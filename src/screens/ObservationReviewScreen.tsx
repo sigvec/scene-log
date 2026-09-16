@@ -21,13 +21,20 @@ export function ObservationReviewScreen({
         {observation.createdAt.toLocaleTimeString()}
       </Text>
 
-      {observation.imageUri && (
+      {Array.from(
+        new Set(
+          observation.captures
+            .map((capture) => capture.sourceImageUri)
+            .filter((uri): uri is string => Boolean(uri)),
+        ),
+      ).map((imageUri) => (
         <Image
-          source={{ uri: observation.imageUri }}
+          key={imageUri}
+          source={{ uri: imageUri }}
           style={styles.reviewImage}
           resizeMode="contain"
         />
-      )}
+      ))}
 
       <View style={styles.reviewSection}>
         <Text style={styles.reviewSectionTitle}>Measurements</Text>
