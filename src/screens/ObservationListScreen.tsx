@@ -63,7 +63,11 @@ export function ObservationListScreen({
                     </Text>
 
                     <Text style={styles.observationCount}>
-                      {observation.captures.length} measurement(s)
+                      {observation.captures.reduce(
+                        (count, capture) => count + capture.fieldValues.length,
+                        0,
+                      )}{" "}
+                      measurement(s)
                     </Text>
                   </View>
 

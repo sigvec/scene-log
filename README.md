@@ -10,7 +10,7 @@ The project is being developed with an emphasis on clear domain modelling, local
 
 ## Current status
 
-**v0.1 — Core observation workflow**
+**v0.2 — Core observation workflow**
 
 SceneLog currently supports capturing and reviewing observations with OCR-derived or manually entered measurements, local persistence, and deletion.
 
@@ -72,15 +72,15 @@ SceneLog separates the core observation model from application services and UI. 
 - **Observation** — a recorded unit of collected information.
 - **Capture** — an individual interpretation/input within an observation.
 - **FieldValue** — a numeric value associated with a field definition.
-- **Field** — identifies the meaning of a value. v0.1 currently uses a built-in value field.
+- **Field** — identifies the meaning of a value. The current implementation uses a built-in value field.
 
-The domain is intentionally more general than the v0.1 UI. The initial interface presents a simple measurement workflow while the underlying model provides room for future observation types and richer templates.
+The domain is intentionally more general than the current UI. The initial interface presents a simple measurement workflow while the underlying model provides room for future observation types and richer templates.
 
 ## Local storage
 
 Observations are serialized before being stored locally. Dates are represented as ISO 8601 strings in persisted data and reconstructed as `Date` objects when loaded.
 
-Captured images are copied from their temporary camera location into the application's private document storage. An observation retains the stored image URI, allowing the image to remain available after the original camera result is gone.
+Captured images are copied from their temporary camera location into the application's private document storage. A capture retains the stored source image URI, allowing the image to remain available after the original camera result is gone.
 
 Deleting an observation also removes its associated stored image.
 
@@ -90,6 +90,7 @@ The current test suite covers:
 
 - Observation creation
 - Capture creation
+- Built-in field definition
 - Observation serialization and deserialization
 - Observation persistence
 - Image storage
