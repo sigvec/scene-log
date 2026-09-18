@@ -10,9 +10,18 @@ The project is being developed with an emphasis on clear domain modelling, local
 
 ## Current status
 
-**v0.2 — Core observation workflow**
+**v0.3 — Fields and typed measurements**
 
-SceneLog currently supports capturing and reviewing observations with OCR-derived or manually entered measurements, local persistence, and deletion.
+SceneLog currently supports typed measurement fields, optional units, duration measurements, OCR-derived or manually entered values, local persistence, editing, and deletion.
+
+The current built-in fields are:
+
+- **Value** — a unitless numeric value
+- **Voltage** — volts (V)
+- **Current** — amperes (A)
+- **Frequency** — hertz (Hz)
+- **Temperature** — degrees Celsius (°C)
+- **Elapsed Time** — a duration stored internally in milliseconds
 
 ## Features
 
@@ -23,8 +32,14 @@ SceneLog currently supports capturing and reviewing observations with OCR-derive
 - Select an OCR result by tapping its region
 - Show the OCR pipeline explicitly:
   - Recognized text
-  - Numeric value extracted from the text
+  - Field-aware interpretation of the reading
   - Editable value
+- Select a field for each measurement
+- Optional units for numeric fields
+- Elapsed-time measurements using timer notation such as `1:30` or `1.30`
+- Store duration values canonically as milliseconds
+- Edit existing measurements
+- Change the field associated with an existing measurement
 - Manually enter a value when OCR does not produce a usable result
 - Record multiple measurements in a single observation
 - Review completed observations
@@ -42,7 +57,7 @@ Detect text with on-device OCR
      ↓
 Select a reading
      ↓
-Recognized text → Numeric value
+Recognized text → Field-aware value
      ↓
 Edit if necessary
      ↓
@@ -71,10 +86,11 @@ SceneLog separates the core observation model from application services and UI. 
 
 - **Observation** — a recorded unit of collected information.
 - **Capture** — an individual interpretation/input within an observation.
-- **FieldValue** — a numeric value associated with a field definition.
-- **Field** — identifies the meaning of a value. The current implementation uses a built-in value field.
+- **FieldValue** — a typed value associated with a field definition.
+- **Field** — identifies the meaning and representation of a value, including its value type and optional unit.
+- **FieldValueType** — defines how a field value is represented; the current implementation supports numeric values and durations.
 
-The domain is intentionally more general than the current UI. The initial interface presents a simple measurement workflow while the underlying model provides room for future observation types and richer templates.
+The domain is intentionally more general than the current UI. The interface currently presents a measurement workflow with built-in fields, while the underlying model provides room for user-defined fields, richer templates, and additional observation types.
 
 ## Local storage
 
@@ -90,7 +106,8 @@ The current test suite covers:
 
 - Observation creation
 - Capture creation
-- Built-in field definition
+- Built-in field definitions and value types
+- Duration parsing and formatting
 - Observation serialization and deserialization
 - Observation persistence
 - Image storage
@@ -100,13 +117,14 @@ The current test suite covers:
 
 Future work may include:
 
-- More flexible templates for different kinds of scenes and data
+- Templates — reusable groups of fields for recurring measurement workflows
+- Scenes — organize observations within experimental or real-world contexts
+- History and analysis — review measurement history and identify trends
+- Smarter acquisition and OCR — improve reading interpretation and acquisition workflows
 - User-defined fields
 - Additional capture types
 - Richer observation metadata
-- Improved scene/measurement relationships
 - Public project sharing
-- Additional OCR and interpretation workflows
 
 The roadmap is deliberately open-ended; future features will be added only when they fit the underlying observation model and provide a useful workflow.
 
