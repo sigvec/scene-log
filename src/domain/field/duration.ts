@@ -1,44 +1,35 @@
 const MINUTE_MS = 60_000;
 const SECOND_MS = 1_000;
 
-/**
- * Parse timer-style input into milliseconds.
- *
- * Supported forms:
- *   1.30       -> 1 minute 30 seconds
- *   12.45      -> 12 minutes 45 seconds
- *   1:30       -> 1 minute 30 seconds
- *   1:30.125   -> 1 minute 30.125 seconds
- *   90         -> 90 seconds
- */
-export function parseDurationInput(input: string): number | null {
-  const text = input.trim();
+export function parseDuration(text: string): number | null {
+  const value = text.trim();
 
-  if (!text) {
+  if (!value) {
     return null;
   }
 
-  const colonMatch = text.match(/^(\d+):(\d{1,2})(?:\.(\d+))?$/);
+  // Timer notation: M:SS or M:SS.mmm
+  const colonMatch = value.match(/^(\d+):(\d{2})(?:\.(\d{1,3}))?$/);
+
   if (colonMatch) {
     const minutes = Number(colonMatch[1]);
     const seconds = Number(colonMatch[2]);
-    const fraction = colonMatch[3] ? Number(`0.${colonMatch[3]}`) : 0;
+    const milliseconds = Number((colonMatch[3] ?? "").padEnd(3, "0") || 0);
 
     if (seconds >= 60) {
       return null;
     }
 
-    const milliseconds = Math.round(
-      minutes * MINUTE_MS + seconds * SECOND_MS + fraction * SECOND_MS,
-    );
-
-    return Number.isFinite(milliseconds) ? milliseconds : null;
+    return minutes * MINUTE_MS + seconds * SECOND_MS + milliseconds;
   }
 
-  const timerMatch = text.match(/^(\d+)\.(\d{2})$/);
-  if (timerMatch) {
-    const minutes = Number(timerMatch[1]);
-    const seconds = Number(timerMatch[2]);
+  // Timer-style decimal notation: M.SS
+  // Deliberately require exactly two digits after the decimal.
+  const dottedMatch = value.match(/^(\d+)\.(\d{2})$/);
+
+  if (dottedMatch) {
+    const minutes = Number(dottedMatch[1]);
+    const seconds = Number(dottedMatch[2]);
 
     if (seconds >= 60) {
       return null;
@@ -47,12 +38,14 @@ export function parseDurationInput(input: string): number | null {
     return minutes * MINUTE_MS + seconds * SECOND_MS;
   }
 
-  const seconds = Number(text);
-  if (!Number.isFinite(seconds) || seconds < 0) {
-    return null;
+  // Plain numbers are interpreted as seconds.
+  const seconds = Number(value);
+
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return seconds * SECOND_MS;
   }
 
-  return Math.round(seconds * SECOND_MS);
+  return null;
 }
 
 export function formatDuration(milliseconds: number): string {
@@ -60,16 +53,16 @@ export function formatDuration(milliseconds: number): string {
     return "—";
   }
 
-  const totalSeconds = milliseconds / SECOND_MS;
+  const totalSeconds = Math.floor(milliseconds / SECOND_MS);
   const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds - minutes * 60;
-  const wholeSeconds = Math.floor(seconds);
-  const fraction = Math.round((seconds - wholeSeconds) * 1000);
+  const seconds = totalSeconds % 60;
+  const remainder = milliseconds % SECOND_MS;
 
-  const secondText = wholeSeconds.toString().padStart(2, "0");
-  if (fraction === 0) {
-    return `${minutes}:${secondText}`;
+  const base = `${minutes}:${seconds.toString().padStart(2, "0")}`;
+
+  if (remainder === 0) {
+    return base;
   }
 
-  return `${minutes}:${secondText}.${fraction.toString().padStart(3, "0")}`;
+  return `${base}.${remainder.toString().padStart(3, "0")}`;
 }

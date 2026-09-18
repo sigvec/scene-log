@@ -10,7 +10,7 @@ import {
 
 import type { Observation } from "../domain/observation/Observation";
 import { FIELD_LIST, getFieldById } from "../domain/field/builtInFields";
-import { formatDuration, parseDurationInput } from "../domain/field/duration";
+import { formatDuration, parseDuration } from "../domain/field/duration";
 import type { TextRegion } from "../services/ocr/TextRegion";
 
 interface ObservationScreenProps {
@@ -183,10 +183,7 @@ export function ObservationScreen({
                   <Pressable
                     key={`${region.text}-${index}`}
                     onPress={() => {
-                      onSelectRegion(
-                        index,
-                        parseNumericValue(region.text)?.toString() ?? "",
-                      );
+                      onSelectRegion(index, region.text);
                     }}
                     style={[
                       styles.textRegion,
@@ -245,12 +242,10 @@ export function ObservationScreen({
                   <Text style={styles.extractedValueText}>
                     {getFieldById(selectedFieldId).valueType === "duration"
                       ? (() => {
-                          const duration = parseDurationInput(
-                            selectedRegion.text,
-                          );
-                          return duration === null
-                            ? "—"
-                            : formatDuration(duration);
+                          const duration = parseDuration(selectedRegion.text);
+                          return duration !== null
+                            ? formatDuration(duration)
+                            : "—";
                         })()
                       : (parseNumericValue(selectedRegion.text)?.toString() ??
                         "—")}
@@ -306,7 +301,7 @@ export function ObservationScreen({
             onChangeText={onValueChange}
             keyboardType={
               getFieldById(selectedFieldId).valueType === "duration"
-                ? "numbers-and-punctuation"
+                ? "default"
                 : "decimal-pad"
             }
             style={styles.valueInput}

@@ -1,25 +1,25 @@
-import { formatDuration, parseDurationInput } from "./duration";
+import { formatDuration, parseDuration } from "./duration";
 
-describe("parseDurationInput", () => {
+describe("parseDuration", () => {
   it("reads dotted timer notation as minutes and seconds", () => {
-    expect(parseDurationInput("1.30")).toBe(90_000);
-    expect(parseDurationInput("12.45")).toBe(765_000);
+    expect(parseDuration("1.30")).toBe(90_000);
+    expect(parseDuration("12.45")).toBe(765_000);
   });
 
   it("reads colon timer notation", () => {
-    expect(parseDurationInput("1:30")).toBe(90_000);
-    expect(parseDurationInput("01:30.125")).toBe(90_125);
+    expect(parseDuration("1:30")).toBe(90_000);
+    expect(parseDuration("01:30.125")).toBe(90_125);
   });
 
   it("reads plain numbers as seconds", () => {
-    expect(parseDurationInput("90")).toBe(90_000);
-    expect(parseDurationInput("1.5")).toBe(1_500);
+    expect(parseDuration("90")).toBe(90_000);
+    expect(parseDuration("1.5")).toBe(1_500);
   });
 
   it("rejects invalid timer seconds", () => {
-    expect(parseDurationInput("1.60")).toBeNull();
-    expect(parseDurationInput("1:60")).toBeNull();
-    expect(parseDurationInput("abc")).toBeNull();
+    expect(parseDuration("1.60")).toBeNull();
+    expect(parseDuration("1:60")).toBeNull();
+    expect(parseDuration("abc")).toBeNull();
   });
 });
 

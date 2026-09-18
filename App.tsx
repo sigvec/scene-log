@@ -18,10 +18,7 @@ import {
   BUILT_IN_FIELDS,
   getFieldById,
 } from "./src/domain/field/builtInFields";
-import {
-  formatDuration,
-  parseDurationInput,
-} from "./src/domain/field/duration";
+import { formatDuration, parseDuration } from "./src/domain/field/duration";
 import {
   loadObservations,
   saveObservations,
@@ -34,7 +31,9 @@ import { ObservationReviewScreen } from "./src/screens/ObservationReviewScreen";
 import { ObservationListScreen } from "./src/screens/ObservationListScreen";
 
 function parseNumericValueForApp(text: string): string {
-  const match = text.match(/[-+]?(?:\d+(?:\.\d*)?|\.\d+)/);
+  const value = text.trim();
+
+  const match = value.match(/^[-+]?(?:\d+(?:\.\d*)?|\.\d+)$/);
   return match?.[0] ?? "";
 }
 
@@ -68,7 +67,7 @@ export default function App() {
   function parseFieldValue(fieldId: string, input: string): number | null {
     const field = getFieldById(fieldId);
     if (field.valueType === "duration") {
-      return parseDurationInput(input);
+      return parseDuration(input);
     }
 
     const value = Number(input);
@@ -433,8 +432,8 @@ export default function App() {
               setSelectedRegionIndex(index);
               setEditedValue(
                 getFieldById(selectedFieldId).valueType === "duration"
-                  ? (textRegions[index]?.text ?? "")
-                  : value,
+                  ? value
+                  : parseNumericValueForApp(value),
               );
             }}
             selectedFieldId={selectedFieldId}
