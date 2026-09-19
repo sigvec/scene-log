@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,6 +17,7 @@ import { recognizeText } from "./src/services/ocr/recognizeText";
 import { createCapture } from "./src/domain/capture/createCapture";
 import {
   BUILT_IN_FIELDS,
+  FIELD_LIST,
   getFieldById,
 } from "./src/domain/field/builtInFields";
 import { formatDuration, parseDuration } from "./src/domain/field/duration";
@@ -29,6 +31,16 @@ import {
 } from "./src/services/storage/imageStorage";
 import { ObservationReviewScreen } from "./src/screens/ObservationReviewScreen";
 import { ObservationListScreen } from "./src/screens/ObservationListScreen";
+import type { Template } from "./src/domain/template/Template";
+import { createTemplate } from "./src/domain/template/createTemplate";
+import {
+  loadTemplates,
+  saveTemplates,
+} from "./src/services/storage/templateStorage";
+import { TemplateListScreen } from "./src/screens/TemplateListScreen";
+import { TemplateEditorScreen } from "./src/screens/TemplateEditorScreen";
+
+type AppScreen = "observations" | "templates" | "templateEditor";
 
 function parseNumericValueForApp(text: string): string {
   const value = text.trim();
@@ -38,6 +50,18 @@ function parseNumericValueForApp(text: string): string {
 }
 
 export default function App() {
+  const [currentScreen, setCurrentScreen] = useState<AppScreen>("observations");
+
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [templatesLoaded, setTemplatesLoaded] = useState(false);
+
+  const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
+
+  const [templateName, setTemplateName] = useState("");
+  const [selectedTemplateFieldIds, setSelectedTemplateFieldIds] = useState<
+    string[]
+  >([]);
+
   const [observations, setObservations] = useState<Observation[]>([]);
   const [activeObservation, setActiveObservation] =
     useState<Observation | null>(null);
@@ -396,6 +420,88 @@ export default function App() {
     saveObservations(observations);
   }, [observations, observationsLoaded]);
 
+  useEffect(() => {
+    async function loadSavedTemplates() {
+      const savedTemplates = await loadTemplates();
+      setTemplates(savedTemplates);
+      setTemplatesLoaded(true);
+    }
+
+    loadSavedTemplates();
+  }, []);
+
+  useEffect(() => {
+    if (!templatesLoaded) {
+      return;
+    }
+
+    saveTemplates(templates);
+  }, [templates, templatesLoaded]);
+
+  function handleOpenTemplates() {
+    setCurrentScreen("templates");
+  }
+
+  function handleNewTemplate() {
+    setEditingTemplate(null);
+    setTemplateName("");
+    setSelectedTemplateFieldIds([]);
+    setCurrentScreen("templateEditor");
+  }
+
+  function handleEditTemplate(template: Template) {
+    setEditingTemplate(template);
+    setTemplateName(template.name);
+    setSelectedTemplateFieldIds([...template.fieldIds]);
+    setCurrentScreen("templateEditor");
+  }
+
+  function handleToggleTemplateField(fieldId: string) {
+    setSelectedTemplateFieldIds((current) =>
+      current.includes(fieldId)
+        ? current.filter((id) => id !== fieldId)
+        : [...current, fieldId],
+    );
+  }
+
+  function handleSaveTemplate() {
+    const name = templateName.trim();
+
+    if (!name || selectedTemplateFieldIds.length === 0) {
+      return;
+    }
+
+    const fieldIds = FIELD_LIST.filter((field) =>
+      selectedTemplateFieldIds.includes(field.id),
+    ).map((field) => field.id);
+
+    if (editingTemplate) {
+      const updatedTemplate: Template = {
+        ...editingTemplate,
+        name,
+        fieldIds,
+        updatedAt: new Date(),
+      };
+
+      setTemplates((current) =>
+        current.map((template) =>
+          template.id === updatedTemplate.id ? updatedTemplate : template,
+        ),
+      );
+    } else {
+      const template = createTemplate(name, fieldIds);
+      setTemplates((current) => [...current, template]);
+    }
+
+    setCurrentScreen("templates");
+  }
+
+  function handleDeleteTemplate(template: Template) {
+    setTemplates((current) =>
+      current.filter((item) => item.id !== template.id),
+    );
+  }
+
   return (
     <KeyboardAvoidingView style={styles.container} behavior="height">
       <ScrollView
@@ -411,6 +517,10 @@ export default function App() {
             </Text>
           </>
         )}
+
+        <Pressable style={styles.templatesButton} onPress={handleOpenTemplates}>
+          <Text style={styles.templatesButtonText}>Templates</Text>
+        </Pressable>
 
         {activeObservation && (
           <ObservationScreen
@@ -488,13 +598,41 @@ export default function App() {
           />
         )}
 
-        {!activeObservation && !reviewObservation && (
-          <ObservationListScreen
-            observations={observations}
-            onNewObservation={handleNewObservation}
-            onSelectObservation={setReviewObservation}
-          />
-        )}
+        {currentScreen === "templates" &&
+          !activeObservation &&
+          !reviewObservation && (
+            <TemplateListScreen
+              templates={templates}
+              onBack={() => setCurrentScreen("observations")}
+              onNewTemplate={handleNewTemplate}
+              onEditTemplate={handleEditTemplate}
+              onDeleteTemplate={handleDeleteTemplate}
+            />
+          )}
+
+        {currentScreen === "templateEditor" &&
+          !activeObservation &&
+          !reviewObservation && (
+            <TemplateEditorScreen
+              template={editingTemplate}
+              name={templateName}
+              selectedFieldIds={selectedTemplateFieldIds}
+              onBack={() => setCurrentScreen("templates")}
+              onNameChange={setTemplateName}
+              onToggleField={handleToggleTemplateField}
+              onSave={handleSaveTemplate}
+            />
+          )}
+
+        {currentScreen === "observations" &&
+          !activeObservation &&
+          !reviewObservation && (
+            <ObservationListScreen
+              observations={observations}
+              onNewObservation={handleNewObservation}
+              onSelectObservation={setReviewObservation}
+            />
+          )}
 
         <StatusBar style="auto" />
       </ScrollView>
@@ -525,5 +663,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
     color: "#666",
+  },
+  templatesButton: {
+    alignSelf: "flex-start",
+    marginBottom: 24,
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+    borderWidth: 1,
+    borderColor: "#D5D8DC",
+    borderRadius: 8,
+    backgroundColor: "#fff",
+  },
+  templatesButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#444",
   },
 });
