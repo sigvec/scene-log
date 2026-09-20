@@ -7,6 +7,7 @@ import { FIELD_LIST, getFieldById } from "../domain/field/builtInFields";
 
 interface ObservationTemplatePickerScreenProps {
   templates: Template[];
+  mode: "manual" | "camera";
   onBack: () => void;
   onSelectField: (fieldId: string) => void;
   onSelectTemplate: (template: Template) => void;
@@ -14,6 +15,7 @@ interface ObservationTemplatePickerScreenProps {
 
 export function ObservationTemplatePickerScreen({
   templates,
+  mode,
   onBack,
   onSelectField,
   onSelectTemplate,
@@ -26,11 +28,15 @@ export function ObservationTemplatePickerScreen({
           <Text style={styles.backButtonText}>Back</Text>
         </Pressable>
 
-        <Text style={styles.title}>Add Measurement</Text>
+        <Text style={styles.title}>
+          {mode === "camera" ? "Capture Measurement" : "Add Measurement"}
+        </Text>
       </View>
 
       <Text style={styles.description}>
-        Choose a single field or use a template to enter a group of related measurements.
+        {mode === "camera"
+          ? "Choose a field or template for the camera capture."
+          : "Choose a single field or use a template to enter a group of related measurements."}
       </Text>
 
       <Text style={styles.sectionTitle}>Field</Text>

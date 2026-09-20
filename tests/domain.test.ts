@@ -39,6 +39,29 @@ describe("createCapture", () => {
     expect(capture.createdAt).toBeInstanceOf(Date);
     expect(capture.fieldValues).toEqual(fieldValues);
     expect(capture.sourceImageUri).toBeUndefined();
+    expect(capture.templateId).toBeUndefined();
+  });
+
+  it("associates a capture with its template", () => {
+    const capture = createCapture(
+      [
+        {
+          fieldId: "voltage",
+          valueType: "number",
+          value: 5.02,
+        },
+        {
+          fieldId: "elapsed-time",
+          valueType: "duration",
+          value: 92_000,
+        },
+      ],
+      "file:///data/images/test.jpg",
+      "test-bench",
+    );
+
+    expect(capture.templateId).toBe("test-bench");
+    expect(capture.sourceImageUri).toBe("file:///data/images/test.jpg");
   });
 });
 

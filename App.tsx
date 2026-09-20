@@ -41,6 +41,7 @@ import { TemplateListScreen } from "./src/screens/TemplateListScreen";
 import { TemplateEditorScreen } from "./src/screens/TemplateEditorScreen";
 import { ObservationTemplatePickerScreen } from "./src/screens/ObservationTemplatePickerScreen";
 import { TemplateMeasurementEntryScreen } from "./src/screens/TemplateMeasurementEntryScreen";
+import { TemplateCaptureReviewScreen } from "./src/screens/TemplateCaptureReviewScreen";
 
 type AppScreen = "observations" | "templates" | "templateEditor";
 
@@ -241,7 +242,76 @@ export default function App() {
     setManualEntry(false);
   }
 
-  async function captureImage() {
+  function resetCaptureState() {
+    setCameraStatus(null);
+    setImageSize(null);
+    setContainerSize(null);
+    setTextRegions([]);
+    setSelectedRegionIndex(null);
+    setSelectedOcrValue(null);
+    setEditedValue("");
+    setCapturedImageUri(null);
+    setEditingMeasurement(null);
+  }
+
+  function normalizeUnit(text: string): string {
+    return text.toLowerCase().replace(/[^a-z0-9]/g, "");
+  }
+
+  function hasExplicitUnit(text: string, unit: string | null): boolean {
+    if (!unit) {
+      return false;
+    }
+
+    return normalizeUnit(text).includes(normalizeUnit(unit));
+  }
+
+  function looksLikeTimer(text: string): boolean {
+    return /\d+\s*:\s*\d{2}(?:\.\d{1,3})?/.test(text) || /\d+\.\d{2}(?!\d)/.test(text);
+  }
+
+  function findTemplateOcrValues(template: Template, regions: TextRegion[]) {
+    const used = new Set<number>();
+
+    return template.fieldIds.map((fieldId) => {
+      const field = getFieldById(fieldId);
+      const candidates = regions
+        .map((region, index) => ({
+          region,
+          index,
+          value: parseOcrValueForField(fieldId, region.text),
+        }))
+        .filter((candidate) => candidate.value !== "" && !used.has(candidate.index))
+        .sort((a, b) => {
+          const score = (candidate: { region: TextRegion }) => {
+            if (field.valueType === "duration") {
+              return looksLikeTimer(candidate.region.text) ? 4 : 0;
+            }
+
+            if (field.unit && hasExplicitUnit(candidate.region.text, field.unit)) {
+              return 4;
+            }
+
+            return field.unit ? 1 : 2;
+          };
+
+          return score(b) - score(a);
+        });
+
+      const candidate = candidates[0];
+      if (candidate) {
+        used.add(candidate.index);
+      }
+
+      return {
+        fieldId,
+        recognizedText: candidate?.region.text ?? "",
+        value: candidate?.value ?? "",
+      };
+    });
+  }
+
+  async function captureImage(template?: Template) {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
 
     if (!permission.granted) {
@@ -274,6 +344,16 @@ export default function App() {
       const regions = await recognizeText(asset.uri);
       setTextRegions(regions);
 
+      if (template) {
+        setTemplateCaptureReview({
+          template,
+          imageUri: storedImageUri,
+          regions,
+        });
+        setObservationTemplatePickerOpen(false);
+        return;
+      }
+
       if (regions.length === 0) {
         setCameraStatus(
           "No text was detected. You can enter the measurement manually.",
@@ -281,6 +361,17 @@ export default function App() {
       }
     } catch {
       setTextRegions([]);
+
+      if (template) {
+        setTemplateCaptureReview({
+          template,
+          imageUri: storedImageUri,
+          regions: [],
+        });
+        setObservationTemplatePickerOpen(false);
+        return;
+      }
+
       setCameraStatus(
         "Text recognition failed. You can enter the measurement manually.",
       );
@@ -291,6 +382,12 @@ export default function App() {
     useState(false);
   const [templateMeasurementEntry, setTemplateMeasurementEntry] =
     useState<Template | null>(null);
+  const [templateCaptureReview, setTemplateCaptureReview] = useState<{
+    template: Template;
+    imageUri: string;
+    regions: TextRegion[];
+  } | null>(null);
+  const [measurementPickerMode, setMeasurementPickerMode] = useState<"manual" | "camera">("manual");
 
   function handleNewObservation() {
     startObservation();
@@ -372,23 +469,70 @@ export default function App() {
     setCapturedImageUri(null);
   }
 
-  async function handleAddMeasurement() {
-    if (!activeObservation) {
+  function openManualMeasurementPicker() {
+    setMeasurementPickerMode("manual");
+    setObservationTemplatePickerOpen(true);
+  }
+
+  function openCameraMeasurementPicker() {
+    resetCaptureState();
+    setMeasurementPickerMode("camera");
+    setObservationTemplatePickerOpen(true);
+  }
+
+  async function startCameraForField(fieldId: string) {
+    setObservationTemplatePickerOpen(false);
+    setSelectedFieldId(fieldId);
+    setManualEntry(false);
+    await captureImage();
+  }
+
+  async function startCameraForTemplate(template: Template) {
+    setObservationTemplatePickerOpen(false);
+    setManualEntry(false);
+    await captureImage(template);
+  }
+
+  function handleSaveTemplateCapture(values: Record<string, string>) {
+    if (!activeObservation || !templateCaptureReview) {
       return;
     }
-    setCameraStatus(null);
-    setManualEntry(false);
 
-    setImageSize(null);
-    setContainerSize(null);
-    setTextRegions([]);
-    setSelectedRegionIndex(null);
-    setSelectedOcrValue(null);
-    setEditedValue("");
-    setCapturedImageUri(null);
-    setEditingMeasurement(null);
+    const fieldValues = templateCaptureReview.template.fieldIds.flatMap((fieldId) => {
+      const input = values[fieldId]?.trim() ?? "";
+      if (!input) {
+        return [];
+      }
 
-    await captureImage();
+      const field = getFieldById(fieldId);
+      const value = parseFieldValue(fieldId, input);
+      return value === null
+        ? []
+        : [{ fieldId: field.id, valueType: field.valueType, value }];
+    });
+
+    if (fieldValues.length === 0) {
+      return;
+    }
+
+    const capture = createCapture(
+      fieldValues,
+      templateCaptureReview.imageUri,
+      templateCaptureReview.template.id,
+    );
+    const updatedObservation: Observation = {
+      ...activeObservation,
+      captures: [...activeObservation.captures, capture],
+    };
+
+    setActiveObservation(updatedObservation);
+    setObservations((current) =>
+      current.map((observation) =>
+        observation.id === updatedObservation.id ? updatedObservation : observation,
+      ),
+    );
+    setTemplateCaptureReview(null);
+    resetCaptureState();
   }
 
   function handleDeleteMeasurement(captureId: string, fieldValueIndex: number) {
@@ -628,7 +772,31 @@ export default function App() {
           />
         )}
 
-        {activeObservation && !templateMeasurementEntry && !observationTemplatePickerOpen && (
+        {templateCaptureReview && !observationTemplatePickerOpen && (
+          <TemplateCaptureReviewScreen
+            template={templateCaptureReview.template}
+            imageUri={templateCaptureReview.imageUri}
+            values={Object.fromEntries(
+              findTemplateOcrValues(
+                templateCaptureReview.template,
+                templateCaptureReview.regions,
+              ).map((item) => [item.fieldId, item.value]),
+            )}
+            recognizedText={Object.fromEntries(
+              findTemplateOcrValues(
+                templateCaptureReview.template,
+                templateCaptureReview.regions,
+              ).map((item) => [item.fieldId, item.recognizedText]),
+            )}
+            onBack={() => {
+              setTemplateCaptureReview(null);
+              resetCaptureState();
+            }}
+            onSave={handleSaveTemplateCapture}
+          />
+        )}
+
+        {activeObservation && !templateMeasurementEntry && !templateCaptureReview && !observationTemplatePickerOpen && (
           <ObservationScreen
             observation={activeObservation}
             templates={templates}
@@ -692,10 +860,8 @@ export default function App() {
               setManualEntry(true);
               setEditedValue("");
             }}
-            onAddManualMeasurement={() => {
-              setObservationTemplatePickerOpen(true);
-            }}
-            onCaptureWithCamera={handleAddMeasurement}
+            onAddManualMeasurement={openManualMeasurementPicker}
+            onCaptureWithCamera={openCameraMeasurementPicker}
             onEditMeasurement={handleStartEditingMeasurement}
             onSaveEditedMeasurement={handleSaveEditedMeasurement}
             onDeleteMeasurement={handleDeleteMeasurement}
@@ -740,8 +906,14 @@ export default function App() {
         {observationTemplatePickerOpen && !reviewObservation && (
           <ObservationTemplatePickerScreen
             templates={templates}
+            mode={measurementPickerMode}
             onBack={() => setObservationTemplatePickerOpen(false)}
             onSelectField={(fieldId) => {
+              if (measurementPickerMode === "camera") {
+                void startCameraForField(fieldId);
+                return;
+              }
+
               setObservationTemplatePickerOpen(false);
               setManualEntry(true);
               setSelectedRegionIndex(null);
@@ -749,7 +921,14 @@ export default function App() {
               setEditedValue("");
               setCameraStatus(null);
             }}
-            onSelectTemplate={startTemplateMeasurementEntry}
+            onSelectTemplate={(template) => {
+              if (measurementPickerMode === "camera") {
+                void startCameraForTemplate(template);
+                return;
+              }
+
+              startTemplateMeasurementEntry(template);
+            }}
           />
         )}
 
