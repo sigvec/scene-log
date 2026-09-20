@@ -9,6 +9,7 @@ export interface ObservationData {
     sourceImageUri?: string;
     fieldValues: Array<{
       fieldId: string;
+      templateFieldId?: string;
       valueType: "number" | "duration";
       value: number;
       unit?: string | null;

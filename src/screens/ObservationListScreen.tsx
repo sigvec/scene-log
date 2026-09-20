@@ -3,17 +3,20 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Card } from "../components/Card";
 import type { Observation } from "../domain/observation/Observation";
+import type { Template } from "../domain/template/Template";
 import { getFieldById } from "../domain/field/builtInFields";
 import { formatDuration } from "../domain/field/duration";
 
 interface ObservationListScreenProps {
   observations: Observation[];
+  templates: Template[];
   onNewObservation: () => void;
   onSelectObservation: (observation: Observation) => void;
 }
 
 export function ObservationListScreen({
   observations,
+  templates,
   onNewObservation,
   onSelectObservation,
 }: ObservationListScreenProps) {
@@ -26,7 +29,18 @@ export function ObservationListScreen({
             ? formatDuration(fieldValue.value)
             : fieldValue.value.toString();
 
-        return field.unit ? `${value} ${field.unit}` : value;
+        const template = capture.templateId
+          ? templates.find((item) => item.id === capture.templateId)
+          : undefined;
+        const templateField = fieldValue.templateFieldId
+          ? template?.fields.find(
+              (candidate) => candidate.id === fieldValue.templateFieldId,
+            )
+          : undefined;
+        const displayName = templateField?.label?.trim() || field.name;
+        const unit = fieldValue.unit ?? field.unit;
+
+        return `${displayName}: ${value}${unit ? ` ${unit}` : ""}`;
       }),
     );
 

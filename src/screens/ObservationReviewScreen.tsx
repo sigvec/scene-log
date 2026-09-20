@@ -66,13 +66,19 @@ export function ObservationReviewScreen({
 
                   {capture.fieldValues.map((fieldValue, index) => {
                     const field = getFieldById(fieldValue.fieldId);
+                    const templateField = capture.templateId
+                      ? template?.fields.find(
+                          (candidate) => candidate.id === fieldValue.templateFieldId,
+                        )
+                      : undefined;
+                    const displayName = templateField?.label?.trim() || field.name;
                     return (
                       <View
                         key={`${capture.id}-${index}`}
                         style={styles.valuePill}
                       >
                         <Text style={styles.valuePillText}>
-                          {field.name}: {fieldValue.valueType === "duration"
+                          {displayName}: {fieldValue.valueType === "duration"
                             ? formatDuration(fieldValue.value)
                             : fieldValue.value}
                           {fieldValue.unit ?? field.unit ? ` ${fieldValue.unit ?? field.unit}` : ""}

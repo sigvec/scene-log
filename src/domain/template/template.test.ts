@@ -3,15 +3,15 @@ import { deserializeTemplate } from "./deserializeTemplate";
 import { serializeTemplate } from "./serializeTemplate";
 import type { TemplateField } from "./TemplateField";
 
-function templateField(id: string, fieldId: string, unit?: string): TemplateField {
-  return { id, fieldId, ...(unit ? { unit } : {}) };
+function templateField(id: string, fieldId: string, unit?: string, label?: string): TemplateField {
+  return { id, fieldId, ...(label ? { label } : {}), ...(unit ? { unit } : {}) };
 }
 
 describe("Template", () => {
   it("creates a template with ordered field slots", () => {
     const fields = [
-      templateField("voltage-sample", "voltage", "V"),
-      templateField("voltage-detector", "voltage", "mV"),
+      templateField("voltage-sample", "voltage", "V", "Sample voltage"),
+      templateField("voltage-detector", "voltage", "mV", "Detector voltage"),
       templateField("current", "current", "mA"),
     ];
 
@@ -35,15 +35,17 @@ describe("Template", () => {
     expect(template.fields[0].id).not.toBe(template.fields[1].id);
   });
 
-  it("round-trips field slots and unit overrides through serialization", () => {
+  it("round-trips field slots, labels, and unit overrides through serialization", () => {
     const template = createTemplate("Electrical Test", [
-      templateField("current", "current", "mA"),
-      templateField("temperature", "temperature", "°F"),
+      templateField("sample-voltage", "voltage", "V", "Sample voltage"),
+      templateField("detector-voltage", "voltage", "mV", "Detector voltage"),
     ]);
 
     const restored = deserializeTemplate(serializeTemplate(template));
 
     expect(restored).toEqual(template);
+    expect(restored.fields[0].label).toBe("Sample voltage");
+    expect(restored.fields[1].label).toBe("Detector voltage");
   });
 
   it("migrates legacy fieldIds templates", () => {

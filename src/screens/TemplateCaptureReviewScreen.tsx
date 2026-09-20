@@ -108,6 +108,18 @@ export function TemplateCaptureReviewScreen({
             }
 
             const field = getFieldById(templateField.fieldId);
+            const label = templateField.label?.trim() || field.name;
+            const padding = 48;
+            const x = Math.max(0, region.bounds.x - padding);
+            const y = Math.max(0, region.bounds.y - padding);
+            const right = Math.min(
+              imageSize?.width ?? 0,
+              region.bounds.x + region.bounds.width + padding,
+            );
+            const bottom = Math.min(
+              imageSize?.height ?? 0,
+              region.bounds.y + region.bounds.height + padding,
+            );
             return (
               <View
                 key={templateField.id}
@@ -115,16 +127,16 @@ export function TemplateCaptureReviewScreen({
                 style={[
                   styles.detectionBox,
                   {
-                    left: transform.offsetX + region.bounds.x * transform.scale,
-                    top: transform.offsetY + region.bounds.y * transform.scale,
-                    width: region.bounds.width * transform.scale,
-                    height: region.bounds.height * transform.scale,
+                    left: transform.offsetX + x * transform.scale,
+                    top: transform.offsetY + y * transform.scale,
+                    width: (right - x) * transform.scale,
+                    height: (bottom - y) * transform.scale,
                   },
                 ]}
               >
                 <View style={styles.detectionLabel}>
                   <Text style={styles.detectionLabelText} numberOfLines={1}>
-                    {field.name}
+                    {label}
                   </Text>
                 </View>
               </View>
@@ -140,11 +152,12 @@ export function TemplateCaptureReviewScreen({
       <View style={styles.fieldList}>
         {template.fields.map((templateField) => {
           const field = getFieldById(templateField.fieldId);
+          const label = templateField.label?.trim() || field.name;
           const unit = templateField.unit ?? field.unit;
           return (
             <View key={templateField.id} style={styles.fieldRow}>
               <View style={styles.fieldHeader}>
-                <Text style={styles.fieldName}>{field.name}</Text>
+                <Text style={styles.fieldName}>{label}</Text>
                 {unit && <Text style={styles.fieldUnit}>{unit}</Text>}
               </View>
               <Text style={styles.recognizedText}>

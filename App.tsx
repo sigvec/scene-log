@@ -481,6 +481,7 @@ export default function App() {
 
       return [{
         fieldId: field.id,
+        templateFieldId: templateField.id,
         valueType: field.valueType,
         value,
         unit: templateField.unit ?? field.unit,
@@ -557,7 +558,13 @@ export default function App() {
       const value = parseFieldValue(templateField.fieldId, input);
       return value === null
         ? []
-        : [{ fieldId: field.id, valueType: field.valueType, value, unit: templateField.unit ?? field.unit }];
+        : [{
+            fieldId: field.id,
+            templateFieldId: templateField.id,
+            valueType: field.valueType,
+            value,
+            unit: templateField.unit ?? field.unit,
+          }];
     });
 
     if (fieldValues.length === 0) {
@@ -1045,6 +1052,7 @@ export default function App() {
               </Pressable>
               <ObservationListScreen
                 observations={observations}
+                templates={templates}
                 onNewObservation={handleNewObservation}
                 onSelectObservation={setReviewObservation}
               />

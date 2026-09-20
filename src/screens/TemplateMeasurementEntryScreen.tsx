@@ -42,6 +42,7 @@ export function TemplateMeasurementEntryScreen({
     templateField,
     field: getFieldById(templateField.fieldId),
     unit: templateField.unit ?? getFieldById(templateField.fieldId).unit,
+    label: templateField.label?.trim() || getFieldById(templateField.fieldId).name,
   }));
   const [values, setValues] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +55,7 @@ export function TemplateMeasurementEntryScreen({
     );
 
     if (invalidField) {
-      setError(`Enter a valid value for ${invalidField.field.name}.`);
+      setError(`Enter a valid value for ${invalidField.label}.`);
       return;
     }
 
@@ -100,10 +101,10 @@ export function TemplateMeasurementEntryScreen({
       </Text>
 
       <View style={styles.fieldList}>
-        {fields.map(({ templateField, field, unit }, index) => (
+        {fields.map(({ templateField, field, unit, label }, index) => (
           <View key={templateField.id} style={styles.fieldRow}>
             <View style={styles.fieldHeader}>
-              <Text style={styles.fieldName}>{field.name}</Text>
+              <Text style={styles.fieldName}>{label}</Text>
               {unit && <Text style={styles.fieldUnit}>{unit}</Text>}
             </View>
 

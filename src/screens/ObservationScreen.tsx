@@ -412,6 +412,12 @@ export function ObservationScreen({
 
                   {capture.fieldValues.map((fieldValue, fieldValueIndex) => {
                     const field = getFieldById(fieldValue.fieldId);
+                    const templateField = capture.templateId
+                      ? templates
+                          .find((candidate) => candidate.id === capture.templateId)
+                          ?.fields.find((candidate) => candidate.id === fieldValue.templateFieldId)
+                      : undefined;
+                    const displayName = templateField?.label?.trim() || field.name;
 
                     return (
                       <View
@@ -431,7 +437,7 @@ export function ObservationScreen({
                           }
                         >
                           <Text style={styles.measurementField}>
-                            {field.name}
+                            {displayName}
                             {fieldValue.unit ?? field.unit
                               ? ` (${fieldValue.unit ?? field.unit})`
                               : ""}
@@ -450,7 +456,7 @@ export function ObservationScreen({
                         <Pressable
                           style={styles.deleteMeasurementButton}
                           accessibilityRole="button"
-                          accessibilityLabel={`Delete ${field.name} measurement`}
+                          accessibilityLabel={`Delete ${displayName} measurement`}
                           hitSlop={8}
                           onPress={() =>
                             onDeleteMeasurement(capture.id, fieldValueIndex)

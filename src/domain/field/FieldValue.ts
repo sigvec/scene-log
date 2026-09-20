@@ -2,6 +2,8 @@ import type { FieldValueType } from "./FieldValueType";
 
 export interface FieldValue {
   fieldId: string;
+  /** Template slot that produced this value, when applicable. */
+  templateFieldId?: string;
   valueType: FieldValueType;
   /** Numeric value; duration fields store milliseconds. */
   value: number;

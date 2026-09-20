@@ -63,7 +63,8 @@ export function ObservationTemplatePickerScreen({
                 .map((templateField) => {
                   const field = getFieldById(templateField.fieldId);
                   const unit = templateField.unit ?? field.unit;
-                  return `${field.name}${unit ? ` (${unit})` : ""}`;
+                  const label = templateField.label?.trim() || field.name;
+                  return `${label}${unit ? ` (${unit})` : ""}`;
                 })
                 .join(" · ")}
             </Text>

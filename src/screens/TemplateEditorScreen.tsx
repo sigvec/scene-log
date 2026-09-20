@@ -123,6 +123,24 @@ export function TemplateEditorScreen({
                 </Pressable>
               </View>
 
+              <Text style={styles.unitLabel}>Label</Text>
+              <TextInput
+                value={templateField.label ?? ""}
+                onChangeText={(label) =>
+                  onFieldsChange(
+                    fields.map((item, fieldIndex) =>
+                      fieldIndex === index
+                        ? { ...item, ...(label.trim() ? { label } : { label: undefined }) }
+                        : item,
+                    ),
+                  )
+                }
+                placeholder={`e.g. ${field.name}`}
+                placeholderTextColor="#999"
+                style={styles.labelInput}
+                autoCapitalize="sentences"
+              />
+
               <View style={styles.fieldChoices}>
                 {FIELD_LIST.map((choice) => (
                   <Pressable
@@ -224,6 +242,7 @@ const styles = StyleSheet.create({
   choiceButtonSelected: { borderColor: "#2563EB", backgroundColor: "#EFF6FF" },
   choiceButtonText: { fontSize: 13, color: "#555" },
   choiceButtonTextSelected: { color: "#1D4ED8", fontWeight: "600" },
+  labelInput: { minHeight: 44, marginBottom: 12, paddingHorizontal: 12, borderWidth: 1, borderColor: "#D5D8DC", borderRadius: 8, backgroundColor: "#FAFAFB", fontSize: 16 },
   unitSection: { marginTop: 12 },
   unitLabel: { marginBottom: 7, fontSize: 13, fontWeight: "600", color: "#666" },
   unitChoices: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
