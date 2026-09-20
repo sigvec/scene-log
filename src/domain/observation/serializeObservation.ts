@@ -10,6 +10,7 @@ export function serializeObservation(
     captures: observation.captures.map((capture) => ({
       id: capture.id,
       createdAt: capture.createdAt.toISOString(),
+      ...(capture.templateId ? { templateId: capture.templateId } : {}),
       ...(capture.sourceImageUri
         ? { sourceImageUri: capture.sourceImageUri }
         : {}),

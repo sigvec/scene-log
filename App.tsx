@@ -39,6 +39,8 @@ import {
 } from "./src/services/storage/templateStorage";
 import { TemplateListScreen } from "./src/screens/TemplateListScreen";
 import { TemplateEditorScreen } from "./src/screens/TemplateEditorScreen";
+import { ObservationTemplatePickerScreen } from "./src/screens/ObservationTemplatePickerScreen";
+import { TemplateMeasurementEntryScreen } from "./src/screens/TemplateMeasurementEntryScreen";
 
 type AppScreen = "observations" | "templates" | "templateEditor";
 
@@ -47,6 +49,31 @@ function parseNumericValueForApp(text: string): string {
 
   const match = value.match(/^[-+]?(?:\d+(?:\.\d*)?|\.\d+)$/);
   return match?.[0] ?? "";
+}
+
+function parseNumericValueFromOcr(text: string): string {
+  const match = text.match(/[-+]?(?:\d+(?:\.\d*)?|\.\d+)/);
+  return match?.[0] ?? "";
+}
+
+function parseDurationFromOcr(text: string): string {
+  const timerMatch = text.match(/\d+\s*:\s*\d{2}(?:\.\d{1,3})?/);
+  if (timerMatch) {
+    return timerMatch[0].replace(/\s+/g, "");
+  }
+
+  const dottedTimerMatch = text.match(/\d+\.\d{2}/);
+  if (dottedTimerMatch) {
+    return dottedTimerMatch[0];
+  }
+
+  return parseNumericValueFromOcr(text);
+}
+
+function parseOcrValueForField(fieldId: string, text: string): string {
+  return getFieldById(fieldId).valueType === "duration"
+    ? parseDurationFromOcr(text)
+    : parseNumericValueFromOcr(text);
 }
 
 export default function App() {
@@ -80,6 +107,7 @@ export default function App() {
     null,
   );
   const [editedValue, setEditedValue] = useState("");
+  const [selectedOcrValue, setSelectedOcrValue] = useState<string | null>(null);
   const [selectedFieldId, setSelectedFieldId] = useState(
     BUILT_IN_FIELDS.value.id,
   );
@@ -111,7 +139,8 @@ export default function App() {
     }
 
     const field = getFieldById(selectedFieldId);
-    const value = parseFieldValue(selectedFieldId, editedValue);
+    const valueInput = editedValue.trim() !== "" ? editedValue : selectedOcrValue ?? "";
+    const value = parseFieldValue(selectedFieldId, valueInput);
 
     if (value === null) {
       return;
@@ -144,6 +173,7 @@ export default function App() {
     );
 
     setSelectedRegionIndex(null);
+    setSelectedOcrValue(null);
     setEditedValue("");
     setManualEntry(false);
   }
@@ -156,7 +186,7 @@ export default function App() {
   ) {
     setEditingMeasurement({ captureId, fieldValueIndex });
     setSelectedRegionIndex(null);
-    setManualEntry(true);
+    setManualEntry(false);
     setCameraStatus(null);
     setSelectedFieldId(fieldId);
     const field = getFieldById(fieldId);
@@ -257,15 +287,26 @@ export default function App() {
     }
   }
 
+  const [observationTemplatePickerOpen, setObservationTemplatePickerOpen] =
+    useState(false);
+  const [templateMeasurementEntry, setTemplateMeasurementEntry] =
+    useState<Template | null>(null);
+
   function handleNewObservation() {
+    startObservation();
+  }
+
+  function startObservation() {
     setCameraStatus(null);
-    setManualEntry(true);
+    setManualEntry(false);
+
     const observation = createObservation();
 
     setImageSize(null);
     setContainerSize(null);
     setTextRegions([]);
     setSelectedRegionIndex(null);
+    setSelectedOcrValue(null);
     setEditedValue("");
     setSelectedFieldId(BUILT_IN_FIELDS.value.id);
 
@@ -273,6 +314,62 @@ export default function App() {
     setActiveObservation(observation);
     setCapturedImageUri(null);
     setEditingMeasurement(null);
+    setObservationTemplatePickerOpen(false);
+  }
+
+  function startTemplateMeasurementEntry(template: Template) {
+    setCameraStatus(null);
+    setObservationTemplatePickerOpen(false);
+    setTemplateMeasurementEntry(template);
+  }
+
+  function handleSaveTemplateMeasurements(values: Record<string, string>) {
+    if (!activeObservation) {
+      return;
+    }
+
+    const fieldValues = Object.entries(values).flatMap(([fieldId, input]) => {
+      const field = getFieldById(fieldId);
+      const value = parseFieldValue(fieldId, input);
+
+      if (value === null) {
+        return [];
+      }
+
+      return [{
+        fieldId: field.id,
+        valueType: field.valueType,
+        value,
+      }];
+    });
+
+    if (fieldValues.length === 0) {
+      return;
+    }
+
+    const capture = createCapture(
+      fieldValues,
+      undefined,
+      templateMeasurementEntry?.id,
+    );
+    const updatedObservation: Observation = {
+      ...activeObservation,
+      captures: [...activeObservation.captures, capture],
+    };
+
+    setObservations((current) =>
+      current.map((observation) =>
+        observation.id === updatedObservation.id
+          ? updatedObservation
+          : observation,
+      ),
+    );
+    setActiveObservation(updatedObservation);
+    setSelectedFieldId(BUILT_IN_FIELDS.value.id);
+    setEditedValue("");
+    setManualEntry(false);
+    setTemplateMeasurementEntry(null);
+    setCapturedImageUri(null);
   }
 
   async function handleAddMeasurement() {
@@ -286,6 +383,7 @@ export default function App() {
     setContainerSize(null);
     setTextRegions([]);
     setSelectedRegionIndex(null);
+    setSelectedOcrValue(null);
     setEditedValue("");
     setCapturedImageUri(null);
     setEditingMeasurement(null);
@@ -352,6 +450,7 @@ export default function App() {
     setContainerSize(null);
     setTextRegions([]);
     setSelectedRegionIndex(null);
+    setSelectedOcrValue(null);
     setEditedValue("");
     setEditingMeasurement(null);
   }
@@ -518,13 +617,21 @@ export default function App() {
           </>
         )}
 
-        <Pressable style={styles.templatesButton} onPress={handleOpenTemplates}>
-          <Text style={styles.templatesButtonText}>Templates</Text>
-        </Pressable>
+        {templateMeasurementEntry && (
+          <TemplateMeasurementEntryScreen
+            template={templateMeasurementEntry}
+            onBack={() => {
+              setTemplateMeasurementEntry(null);
+              setObservationTemplatePickerOpen(true);
+            }}
+            onSave={handleSaveTemplateMeasurements}
+          />
+        )}
 
-        {activeObservation && (
+        {activeObservation && !templateMeasurementEntry && !observationTemplatePickerOpen && (
           <ObservationScreen
             observation={activeObservation}
+            templates={templates}
             capturedImageUri={capturedImageUri}
             imageSize={imageSize}
             containerSize={containerSize}
@@ -539,12 +646,19 @@ export default function App() {
               setContainerSize({ width, height });
             }}
             onSelectRegion={(index, value) => {
+              const field = getFieldById(selectedFieldId);
+              const extractedValue = parseOcrValueForField(selectedFieldId, value);
+
               setSelectedRegionIndex(index);
-              setEditedValue(
-                getFieldById(selectedFieldId).valueType === "duration"
-                  ? value
-                  : parseNumericValueForApp(value),
-              );
+              setSelectedOcrValue(extractedValue);
+              setEditedValue(extractedValue);
+
+              // Keep the OCR-derived value as an explicit source value so that
+              // saving immediately cannot fall back to Number("") === 0.
+              if (field.valueType === "duration" && !extractedValue) {
+                setSelectedOcrValue(null);
+                setEditedValue("");
+              }
             }}
             selectedFieldId={selectedFieldId}
             onFieldChange={(fieldId: string) => {
@@ -553,11 +667,12 @@ export default function App() {
 
               if (selectedRegionIndex !== null) {
                 const region = textRegions[selectedRegionIndex];
-                setEditedValue(
-                  nextField.valueType === "duration"
-                    ? (region?.text ?? "")
-                    : parseNumericValueForApp(region?.text ?? ""),
+                const extractedValue = parseOcrValueForField(
+                  fieldId,
+                  region?.text ?? "",
                 );
+                setSelectedOcrValue(extractedValue || null);
+                setEditedValue(extractedValue);
                 return;
               }
 
@@ -578,10 +693,7 @@ export default function App() {
               setEditedValue("");
             }}
             onAddManualMeasurement={() => {
-              setManualEntry(true);
-              setSelectedRegionIndex(null);
-              setEditedValue("");
-              setCameraStatus(null);
+              setObservationTemplatePickerOpen(true);
             }}
             onCaptureWithCamera={handleAddMeasurement}
             onEditMeasurement={handleStartEditingMeasurement}
@@ -593,6 +705,7 @@ export default function App() {
         {reviewObservation && (
           <ObservationReviewScreen
             observation={reviewObservation}
+            templates={templates}
             onBack={() => setReviewObservation(null)}
             onDelete={handleDeleteObservation}
           />
@@ -624,14 +737,39 @@ export default function App() {
             />
           )}
 
+        {observationTemplatePickerOpen && !reviewObservation && (
+          <ObservationTemplatePickerScreen
+            templates={templates}
+            onBack={() => setObservationTemplatePickerOpen(false)}
+            onSelectField={(fieldId) => {
+              setObservationTemplatePickerOpen(false);
+              setManualEntry(true);
+              setSelectedRegionIndex(null);
+              setSelectedFieldId(fieldId);
+              setEditedValue("");
+              setCameraStatus(null);
+            }}
+            onSelectTemplate={startTemplateMeasurementEntry}
+          />
+        )}
+
         {currentScreen === "observations" &&
+          !observationTemplatePickerOpen &&
           !activeObservation &&
           !reviewObservation && (
-            <ObservationListScreen
-              observations={observations}
-              onNewObservation={handleNewObservation}
-              onSelectObservation={setReviewObservation}
-            />
+            <>
+              <Pressable
+                style={styles.templatesButton}
+                onPress={handleOpenTemplates}
+              >
+                <Text style={styles.templatesButtonText}>Templates</Text>
+              </Pressable>
+              <ObservationListScreen
+                observations={observations}
+                onNewObservation={handleNewObservation}
+                onSelectObservation={setReviewObservation}
+              />
+            </>
           )}
 
         <StatusBar style="auto" />

@@ -1,17 +1,20 @@
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { Observation } from "../domain/observation/Observation";
+import type { Template } from "../domain/template/Template";
 import { getFieldById } from "../domain/field/builtInFields";
 import { formatDuration } from "../domain/field/duration";
 
 interface ObservationReviewScreenProps {
   observation: Observation;
+  templates: Template[];
   onBack: () => void;
   onDelete: () => void;
 }
 
 export function ObservationReviewScreen({
   observation,
+  templates,
   onBack,
   onDelete,
 }: ObservationReviewScreenProps) {
@@ -43,20 +46,43 @@ export function ObservationReviewScreen({
 
         {observation.captures.length > 0 ? (
           <View style={styles.reviewValues}>
-            {observation.captures.flatMap((capture) =>
-              capture.fieldValues.map((fieldValue, index) => (
-                <View key={`${capture.id}-${index}`} style={styles.valuePill}>
-                  <Text style={styles.valuePillText}>
-                    {getFieldById(fieldValue.fieldId).name}: {fieldValue.valueType === "duration"
-                      ? formatDuration(fieldValue.value)
-                      : fieldValue.value}
-                    {getFieldById(fieldValue.fieldId).unit
-                      ? ` ${getFieldById(fieldValue.fieldId).unit}`
-                      : ""}
-                  </Text>
+            {observation.captures.map((capture, captureIndex) => {
+              const template = capture.templateId
+                ? templates.find((item) => item.id === capture.templateId)
+                : undefined;
+
+              return (
+                <View key={capture.id} style={styles.measurementGroup}>
+                  <View style={styles.measurementGroupHeader}>
+                    <Text style={styles.measurementGroupTitle}>
+                      Measurement {captureIndex + 1}
+                    </Text>
+                    {template && (
+                      <Text style={styles.measurementTemplateName}>
+                        {template.name}
+                      </Text>
+                    )}
+                  </View>
+
+                  {capture.fieldValues.map((fieldValue, index) => {
+                    const field = getFieldById(fieldValue.fieldId);
+                    return (
+                      <View
+                        key={`${capture.id}-${index}`}
+                        style={styles.valuePill}
+                      >
+                        <Text style={styles.valuePillText}>
+                          {field.name}: {fieldValue.valueType === "duration"
+                            ? formatDuration(fieldValue.value)
+                            : fieldValue.value}
+                          {field.unit ? ` ${field.unit}` : ""}
+                        </Text>
+                      </View>
+                    );
+                  })}
                 </View>
-              )),
-            )}
+              );
+            })}
           </View>
         ) : (
           <Text style={styles.reviewEmpty}>No measurements recorded.</Text>
@@ -107,6 +133,27 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 8,
     marginTop: 12,
+  },
+  measurementGroup: {
+    width: "100%",
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: "#F7F7F8",
+  },
+  measurementGroupHeader: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  measurementGroupTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#333",
+  },
+  measurementTemplateName: {
+    fontSize: 13,
+    color: "#666",
   },
   valuePill: {
     paddingHorizontal: 12,

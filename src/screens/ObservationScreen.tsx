@@ -9,12 +9,14 @@ import {
 } from "react-native";
 
 import type { Observation } from "../domain/observation/Observation";
+import type { Template } from "../domain/template/Template";
 import { FIELD_LIST, getFieldById } from "../domain/field/builtInFields";
 import { formatDuration, parseDuration } from "../domain/field/duration";
 import type { TextRegion } from "../services/ocr/TextRegion";
 
 interface ObservationScreenProps {
   observation: Observation;
+  templates: Template[];
   capturedImageUri: string | null;
   imageSize: {
     width: number;
@@ -89,6 +91,7 @@ function isLikelyMeasurement(region: TextRegion): boolean {
 
 export function ObservationScreen({
   observation,
+  templates,
   capturedImageUri,
   imageSize,
   containerSize,
@@ -114,10 +117,7 @@ export function ObservationScreen({
 }: ObservationScreenProps) {
   const selectedRegion =
     selectedRegionIndex !== null ? textRegions[selectedRegionIndex] : null;
-  const measurementCount = observation.captures.reduce(
-    (count, capture) => count + capture.fieldValues.length,
-    0,
-  );
+  const measurementCount = observation.captures.length;
 
   return (
     <View style={styles.activeObservation}>
@@ -361,69 +361,73 @@ export function ObservationScreen({
 
         {measurementCount > 0 && (
           <View style={styles.measurementList}>
-            {observation.captures
-              .flatMap((capture) =>
-                capture.fieldValues.map((fieldValue, index) => ({
-                  capture,
-                  fieldValue,
-                  fieldValueIndex: index,
-                })),
-              )
-              .map(
-                (
-                  { capture, fieldValue, fieldValueIndex },
-                  measurementIndex,
-                ) => (
-                  <View
-                    key={`${capture.id}-${fieldValueIndex}`}
-                    style={styles.measurementRow}
-                  >
-                    <Pressable
-                      style={styles.measurementEditArea}
-                      onPress={() =>
-                        onEditMeasurement(
-                          capture.id,
-                          fieldValueIndex,
-                          fieldValue.fieldId,
-                          fieldValue.value,
-                        )
-                      }
-                    >
-                      <Text style={styles.measurementIndex}>
-                        {measurementIndex + 1}
-                      </Text>
+            {observation.captures.map((capture, captureIndex) => {
+              const template = capture.templateId
+                ? templates.find((item) => item.id === capture.templateId)
+                : undefined;
 
-                      <Text style={styles.measurementField}>
-                        {getFieldById(fieldValue.fieldId).name}
-                        {getFieldById(fieldValue.fieldId).unit
-                          ? ` (${getFieldById(fieldValue.fieldId).unit})`
-                          : ""}
+              return (
+                <View key={capture.id} style={styles.measurementGroup}>
+                  <View style={styles.measurementGroupHeader}>
+                    <Text style={styles.measurementGroupTitle}>
+                      Measurement {captureIndex + 1}
+                    </Text>
+                    {template && (
+                      <Text style={styles.measurementTemplateName}>
+                        {template.name}
                       </Text>
-
-                      <Text style={styles.measurementValue}>
-                        {fieldValue.valueType === "duration"
-                          ? formatDuration(fieldValue.value)
-                          : fieldValue.value}
-                        {getFieldById(fieldValue.fieldId).unit
-                          ? ` ${getFieldById(fieldValue.fieldId).unit}`
-                          : ""}
-                      </Text>
-                    </Pressable>
-
-                    <Pressable
-                      style={styles.deleteMeasurementButton}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Delete measurement ${measurementIndex + 1}`}
-                      hitSlop={8}
-                      onPress={() =>
-                        onDeleteMeasurement(capture.id, fieldValueIndex)
-                      }
-                    >
-                      <Text style={styles.deleteMeasurementText}>×</Text>
-                    </Pressable>
+                    )}
                   </View>
-                ),
-              )}
+
+                  {capture.fieldValues.map((fieldValue, fieldValueIndex) => {
+                    const field = getFieldById(fieldValue.fieldId);
+
+                    return (
+                      <View
+                        key={`${capture.id}-${fieldValueIndex}`}
+                        style={styles.measurementRow}
+                      >
+                        <Pressable
+                          style={styles.measurementEditArea}
+                          onPress={() =>
+                            onEditMeasurement(
+                              capture.id,
+                              fieldValueIndex,
+                              fieldValue.fieldId,
+                              fieldValue.value,
+                            )
+                          }
+                        >
+                          <Text style={styles.measurementField}>
+                            {field.name}
+                            {field.unit ? ` (${field.unit})` : ""}
+                          </Text>
+
+                          <Text style={styles.measurementValue}>
+                            {fieldValue.valueType === "duration"
+                              ? formatDuration(fieldValue.value)
+                              : fieldValue.value}
+                            {field.unit ? ` ${field.unit}` : ""}
+                          </Text>
+                        </Pressable>
+
+                        <Pressable
+                          style={styles.deleteMeasurementButton}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Delete ${field.name} measurement`}
+                          hitSlop={8}
+                          onPress={() =>
+                            onDeleteMeasurement(capture.id, fieldValueIndex)
+                          }
+                        >
+                          <Text style={styles.deleteMeasurementText}>×</Text>
+                        </Pressable>
+                      </View>
+                    );
+                  })}
+                </View>
+              );
+            })}
           </View>
         )}
 
@@ -742,6 +746,27 @@ const styles = StyleSheet.create({
     color: "#2563EB",
   },
 
+  measurementGroup: {
+    marginBottom: 14,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: "#F7F7F8",
+  },
+  measurementGroupHeader: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  measurementGroupTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#333",
+  },
+  measurementTemplateName: {
+    fontSize: 13,
+    color: "#666",
+  },
   measurementList: {
     marginTop: 12,
     gap: 8,

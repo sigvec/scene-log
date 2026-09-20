@@ -6,12 +6,14 @@ export function deserializeObservation(data: ObservationData): Observation {
   const captures = data.captures.map((capture) => ({
     id: capture.id,
     createdAt: new Date(capture.createdAt),
+    ...(capture.templateId ? { templateId: capture.templateId } : {}),
     sourceImageUri: capture.sourceImageUri,
     fieldValues: capture.fieldValues.map((fieldValue) => ({
       ...fieldValue,
       // v0.2 values did not persist a type. Preserve them as numeric Values.
       valueType:
-        fieldValue.valueType ?? getFieldById(fieldValue.fieldId).valueType ??
+        fieldValue.valueType ??
+        getFieldById(fieldValue.fieldId).valueType ??
         BUILT_IN_FIELDS.value.valueType,
     })),
   }));

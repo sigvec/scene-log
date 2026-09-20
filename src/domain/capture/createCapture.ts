@@ -8,10 +8,12 @@ function generateId(): string {
 export function createCapture(
   fieldValues: FieldValue[],
   sourceImageUri?: string,
+  templateId?: string,
 ): Capture {
   return {
     id: generateId(),
     createdAt: new Date(),
+    ...(templateId ? { templateId } : {}),
     ...(sourceImageUri ? { sourceImageUri } : {}),
     fieldValues,
   };
