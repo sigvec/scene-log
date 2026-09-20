@@ -17,10 +17,11 @@ import { recognizeText } from "./src/services/ocr/recognizeText";
 import { createCapture } from "./src/domain/capture/createCapture";
 import {
   BUILT_IN_FIELDS,
-  FIELD_LIST,
   getFieldById,
+  getUnitsForField,
 } from "./src/domain/field/builtInFields";
 import { formatDuration, parseDuration } from "./src/domain/field/duration";
+import { convertUnitValue, findUnitInText } from "./src/domain/field/units";
 import {
   loadObservations,
   saveObservations,
@@ -32,6 +33,7 @@ import {
 import { ObservationReviewScreen } from "./src/screens/ObservationReviewScreen";
 import { ObservationListScreen } from "./src/screens/ObservationListScreen";
 import type { Template } from "./src/domain/template/Template";
+import type { TemplateField } from "./src/domain/template/TemplateField";
 import { createTemplate } from "./src/domain/template/createTemplate";
 import {
   loadTemplates,
@@ -44,13 +46,6 @@ import { TemplateMeasurementEntryScreen } from "./src/screens/TemplateMeasuremen
 import { TemplateCaptureReviewScreen } from "./src/screens/TemplateCaptureReviewScreen";
 
 type AppScreen = "observations" | "templates" | "templateEditor";
-
-function parseNumericValueForApp(text: string): string {
-  const value = text.trim();
-
-  const match = value.match(/^[-+]?(?:\d+(?:\.\d*)?|\.\d+)$/);
-  return match?.[0] ?? "";
-}
 
 function parseNumericValueFromOcr(text: string): string {
   const match = text.match(/[-+]?(?:\d+(?:\.\d*)?|\.\d+)/);
@@ -71,10 +66,40 @@ function parseDurationFromOcr(text: string): string {
   return parseNumericValueFromOcr(text);
 }
 
-function parseOcrValueForField(fieldId: string, text: string): string {
-  return getFieldById(fieldId).valueType === "duration"
-    ? parseDurationFromOcr(text)
-    : parseNumericValueFromOcr(text);
+function parseOcrValueForField(
+  fieldId: string,
+  text: string,
+  targetUnit?: string | null,
+): string {
+  const field = getFieldById(fieldId);
+
+  if (field.valueType === "duration") {
+    return parseDurationFromOcr(text);
+  }
+
+  const numericText = parseNumericValueFromOcr(text);
+  if (!numericText) {
+    return "";
+  }
+
+  if (!targetUnit) {
+    return numericText;
+  }
+
+  const sourceUnit = findUnitInText(fieldId, text);
+
+  if (!sourceUnit) {
+    return numericText;
+  }
+
+  const converted = convertUnitValue(
+    fieldId,
+    Number(numericText),
+    sourceUnit,
+    targetUnit,
+  );
+
+  return converted === null ? "" : converted.toString();
 }
 
 export default function App() {
@@ -86,9 +111,7 @@ export default function App() {
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
 
   const [templateName, setTemplateName] = useState("");
-  const [selectedTemplateFieldIds, setSelectedTemplateFieldIds] = useState<
-    string[]
-  >([]);
+  const [templateFields, setTemplateFields] = useState<TemplateField[]>([]);
 
   const [observations, setObservations] = useState<Observation[]>([]);
   const [activeObservation, setActiveObservation] =
@@ -112,9 +135,13 @@ export default function App() {
   const [selectedFieldId, setSelectedFieldId] = useState(
     BUILT_IN_FIELDS.value.id,
   );
+  const [selectedUnit, setSelectedUnit] = useState<string | null>(
+    BUILT_IN_FIELDS.value.unit,
+  );
   const [editingMeasurement, setEditingMeasurement] = useState<{
     captureId: string;
     fieldValueIndex: number;
+    unit: string | null;
   } | null>(null);
 
   function parseFieldValue(fieldId: string, input: string): number | null {
@@ -153,6 +180,7 @@ export default function App() {
           fieldId: field.id,
           valueType: field.valueType,
           value,
+          unit: selectedUnit,
         },
       ],
       capturedImageUri ?? undefined,
@@ -184,12 +212,18 @@ export default function App() {
     fieldValueIndex: number,
     fieldId: string,
     value: number,
+    unit: string | null | undefined,
   ) {
-    setEditingMeasurement({ captureId, fieldValueIndex });
+    setEditingMeasurement({
+      captureId,
+      fieldValueIndex,
+      unit: unit ?? getFieldById(fieldId).unit,
+    });
     setSelectedRegionIndex(null);
     setManualEntry(false);
     setCameraStatus(null);
     setSelectedFieldId(fieldId);
+    setSelectedUnit(unit ?? getFieldById(fieldId).unit);
     const field = getFieldById(fieldId);
     setEditedValue(formatFieldInput(fieldId, value));
   }
@@ -219,6 +253,7 @@ export default function App() {
                       fieldId: currentField.id,
                       valueType: currentField.valueType,
                       value,
+                      unit: selectedUnit,
                     }
                   : fieldValue,
               ),
@@ -273,13 +308,14 @@ export default function App() {
   function findTemplateOcrValues(template: Template, regions: TextRegion[]) {
     const used = new Set<number>();
 
-    return template.fieldIds.map((fieldId) => {
-      const field = getFieldById(fieldId);
+    return template.fields.map((templateField) => {
+      const field = getFieldById(templateField.fieldId);
+      const unit = templateField.unit ?? field.unit;
       const candidates = regions
         .map((region, index) => ({
           region,
           index,
-          value: parseOcrValueForField(fieldId, region.text),
+          value: parseOcrValueForField(templateField.fieldId, region.text, unit),
         }))
         .filter((candidate) => candidate.value !== "" && !used.has(candidate.index))
         .sort((a, b) => {
@@ -288,11 +324,11 @@ export default function App() {
               return looksLikeTimer(candidate.region.text) ? 4 : 0;
             }
 
-            if (field.unit && hasExplicitUnit(candidate.region.text, field.unit)) {
+            if (unit && hasExplicitUnit(candidate.region.text, unit)) {
               return 4;
             }
 
-            return field.unit ? 1 : 2;
+            return unit ? 1 : 2;
           };
 
           return score(b) - score(a);
@@ -304,9 +340,12 @@ export default function App() {
       }
 
       return {
-        fieldId,
+        templateFieldId: templateField.id,
+        fieldId: templateField.fieldId,
+        unit,
         recognizedText: candidate?.region.text ?? "",
         value: candidate?.value ?? "",
+        region: candidate?.region ?? null,
       };
     });
   }
@@ -406,6 +445,7 @@ export default function App() {
     setSelectedOcrValue(null);
     setEditedValue("");
     setSelectedFieldId(BUILT_IN_FIELDS.value.id);
+    setSelectedUnit(BUILT_IN_FIELDS.value.unit);
 
     setObservations((current) => [...current, observation]);
     setActiveObservation(observation);
@@ -421,13 +461,19 @@ export default function App() {
   }
 
   function handleSaveTemplateMeasurements(values: Record<string, string>) {
-    if (!activeObservation) {
+    if (!activeObservation || !templateMeasurementEntry) {
       return;
     }
 
-    const fieldValues = Object.entries(values).flatMap(([fieldId, input]) => {
-      const field = getFieldById(fieldId);
-      const value = parseFieldValue(fieldId, input);
+    const fieldValues = templateMeasurementEntry.fields.flatMap((templateField) => {
+      const input = values[templateField.id]?.trim() ?? "";
+
+      if (!input) {
+        return [];
+      }
+
+      const field = getFieldById(templateField.fieldId);
+      const value = parseFieldValue(templateField.fieldId, input);
 
       if (value === null) {
         return [];
@@ -437,6 +483,7 @@ export default function App() {
         fieldId: field.id,
         valueType: field.valueType,
         value,
+        unit: templateField.unit ?? field.unit,
       }];
     });
 
@@ -447,7 +494,7 @@ export default function App() {
     const capture = createCapture(
       fieldValues,
       undefined,
-      templateMeasurementEntry?.id,
+      templateMeasurementEntry.id,
     );
     const updatedObservation: Observation = {
       ...activeObservation,
@@ -463,6 +510,7 @@ export default function App() {
     );
     setActiveObservation(updatedObservation);
     setSelectedFieldId(BUILT_IN_FIELDS.value.id);
+    setSelectedUnit(BUILT_IN_FIELDS.value.unit);
     setEditedValue("");
     setManualEntry(false);
     setTemplateMeasurementEntry(null);
@@ -483,6 +531,7 @@ export default function App() {
   async function startCameraForField(fieldId: string) {
     setObservationTemplatePickerOpen(false);
     setSelectedFieldId(fieldId);
+    setSelectedUnit(getFieldById(fieldId).unit);
     setManualEntry(false);
     await captureImage();
   }
@@ -498,17 +547,17 @@ export default function App() {
       return;
     }
 
-    const fieldValues = templateCaptureReview.template.fieldIds.flatMap((fieldId) => {
-      const input = values[fieldId]?.trim() ?? "";
+    const fieldValues = templateCaptureReview.template.fields.flatMap((templateField) => {
+      const input = values[templateField.id]?.trim() ?? "";
       if (!input) {
         return [];
       }
 
-      const field = getFieldById(fieldId);
-      const value = parseFieldValue(fieldId, input);
+      const field = getFieldById(templateField.fieldId);
+      const value = parseFieldValue(templateField.fieldId, input);
       return value === null
         ? []
-        : [{ fieldId: field.id, valueType: field.valueType, value }];
+        : [{ fieldId: field.id, valueType: field.valueType, value, unit: templateField.unit ?? field.unit }];
     });
 
     if (fieldValues.length === 0) {
@@ -596,6 +645,7 @@ export default function App() {
     setSelectedRegionIndex(null);
     setSelectedOcrValue(null);
     setEditedValue("");
+    setSelectedUnit(BUILT_IN_FIELDS.value.unit);
     setEditingMeasurement(null);
   }
 
@@ -688,41 +738,29 @@ export default function App() {
   function handleNewTemplate() {
     setEditingTemplate(null);
     setTemplateName("");
-    setSelectedTemplateFieldIds([]);
+    setTemplateFields([]);
     setCurrentScreen("templateEditor");
   }
 
   function handleEditTemplate(template: Template) {
     setEditingTemplate(template);
     setTemplateName(template.name);
-    setSelectedTemplateFieldIds([...template.fieldIds]);
+    setTemplateFields(template.fields.map((field) => ({ ...field })));
     setCurrentScreen("templateEditor");
-  }
-
-  function handleToggleTemplateField(fieldId: string) {
-    setSelectedTemplateFieldIds((current) =>
-      current.includes(fieldId)
-        ? current.filter((id) => id !== fieldId)
-        : [...current, fieldId],
-    );
   }
 
   function handleSaveTemplate() {
     const name = templateName.trim();
 
-    if (!name || selectedTemplateFieldIds.length === 0) {
+    if (!name || templateFields.length === 0) {
       return;
     }
-
-    const fieldIds = FIELD_LIST.filter((field) =>
-      selectedTemplateFieldIds.includes(field.id),
-    ).map((field) => field.id);
 
     if (editingTemplate) {
       const updatedTemplate: Template = {
         ...editingTemplate,
         name,
-        fieldIds,
+        fields: templateFields.map((field) => ({ ...field })),
         updatedAt: new Date(),
       };
 
@@ -732,7 +770,7 @@ export default function App() {
         ),
       );
     } else {
-      const template = createTemplate(name, fieldIds);
+      const template = createTemplate(name, templateFields);
       setTemplates((current) => [...current, template]);
     }
 
@@ -776,17 +814,24 @@ export default function App() {
           <TemplateCaptureReviewScreen
             template={templateCaptureReview.template}
             imageUri={templateCaptureReview.imageUri}
+            imageSize={imageSize}
+            matches={Object.fromEntries(
+              findTemplateOcrValues(
+                templateCaptureReview.template,
+                templateCaptureReview.regions,
+              ).map((item) => [item.templateFieldId, item]),
+            )}
             values={Object.fromEntries(
               findTemplateOcrValues(
                 templateCaptureReview.template,
                 templateCaptureReview.regions,
-              ).map((item) => [item.fieldId, item.value]),
+              ).map((item) => [item.templateFieldId, item.value]),
             )}
             recognizedText={Object.fromEntries(
               findTemplateOcrValues(
                 templateCaptureReview.template,
                 templateCaptureReview.regions,
-              ).map((item) => [item.fieldId, item.recognizedText]),
+              ).map((item) => [item.templateFieldId, item.recognizedText]),
             )}
             onBack={() => {
               setTemplateCaptureReview(null);
@@ -815,7 +860,11 @@ export default function App() {
             }}
             onSelectRegion={(index, value) => {
               const field = getFieldById(selectedFieldId);
-              const extractedValue = parseOcrValueForField(selectedFieldId, value);
+              const extractedValue = parseOcrValueForField(
+                selectedFieldId,
+                value,
+                selectedUnit,
+              );
 
               setSelectedRegionIndex(index);
               setSelectedOcrValue(extractedValue);
@@ -829,15 +878,18 @@ export default function App() {
               }
             }}
             selectedFieldId={selectedFieldId}
+            selectedUnit={selectedUnit}
             onFieldChange={(fieldId: string) => {
               const nextField = getFieldById(fieldId);
               setSelectedFieldId(fieldId);
+              setSelectedUnit(nextField.unit);
 
               if (selectedRegionIndex !== null) {
                 const region = textRegions[selectedRegionIndex];
                 const extractedValue = parseOcrValueForField(
                   fieldId,
                   region?.text ?? "",
+                  nextField.unit,
                 );
                 setSelectedOcrValue(extractedValue || null);
                 setEditedValue(extractedValue);
@@ -850,9 +902,56 @@ export default function App() {
                   editedValue,
                 );
                 if (currentValue !== null) {
-                  setEditedValue(formatFieldInput(fieldId, currentValue));
+                  const convertedValue =
+                    selectedUnit && nextField.unit &&
+                    getUnitsForField(selectedFieldId).length > 0 &&
+                    getUnitsForField(fieldId).length > 0
+                      ? convertUnitValue(
+                          selectedFieldId,
+                          currentValue,
+                          selectedUnit,
+                          nextField.unit,
+                        )
+                      : currentValue;
+
+                  setEditedValue(
+                    formatFieldInput(
+                      fieldId,
+                      convertedValue ?? currentValue,
+                    ),
+                  );
                 }
               }
+            }}
+            onUnitChange={(unit: string | null) => {
+              if (unit === selectedUnit) {
+                return;
+              }
+
+              if (
+                editedValue &&
+                selectedUnit &&
+                unit &&
+                getUnitsForField(selectedFieldId).length > 0
+              ) {
+                const currentValue = parseFieldValue(
+                  selectedFieldId,
+                  editedValue,
+                );
+                if (currentValue !== null) {
+                  const convertedValue = convertUnitValue(
+                    selectedFieldId,
+                    currentValue,
+                    selectedUnit,
+                    unit,
+                  );
+                  if (convertedValue !== null) {
+                    setEditedValue(formatFieldInput(selectedFieldId, convertedValue));
+                  }
+                }
+              }
+
+              setSelectedUnit(unit);
             }}
             onValueChange={setEditedValue}
             onSaveValue={handleSaveValue}
@@ -895,10 +994,10 @@ export default function App() {
             <TemplateEditorScreen
               template={editingTemplate}
               name={templateName}
-              selectedFieldIds={selectedTemplateFieldIds}
+              fields={templateFields}
               onBack={() => setCurrentScreen("templates")}
               onNameChange={setTemplateName}
-              onToggleField={handleToggleTemplateField}
+              onFieldsChange={setTemplateFields}
               onSave={handleSaveTemplate}
             />
           )}
@@ -918,6 +1017,7 @@ export default function App() {
               setManualEntry(true);
               setSelectedRegionIndex(null);
               setSelectedFieldId(fieldId);
+              setSelectedUnit(getFieldById(fieldId).unit);
               setEditedValue("");
               setCameraStatus(null);
             }}

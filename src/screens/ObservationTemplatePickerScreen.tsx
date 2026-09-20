@@ -59,8 +59,12 @@ export function ObservationTemplatePickerScreen({
           <Card>
             <Text style={styles.optionTitle}>{template.name}</Text>
             <Text style={styles.optionDescription}>
-              {template.fieldIds
-                .map((fieldId) => getFieldById(fieldId).name)
+              {template.fields
+                .map((templateField) => {
+                  const field = getFieldById(templateField.fieldId);
+                  const unit = templateField.unit ?? field.unit;
+                  return `${field.name}${unit ? ` (${unit})` : ""}`;
+                })
                 .join(" · ")}
             </Text>
           </Card>

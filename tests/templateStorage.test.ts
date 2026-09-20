@@ -17,9 +17,9 @@ describe("template storage", () => {
 
   it("saves and loads templates", async () => {
     const template = createTemplate("Electrical Test", [
-      "voltage",
-      "current",
-      "frequency",
+      { id: "voltage", fieldId: "voltage", unit: "V" },
+      { id: "current", fieldId: "current", unit: "mA" },
+      { id: "frequency", fieldId: "frequency", unit: "Hz" },
     ]);
 
     await saveTemplates([template]);
@@ -37,10 +37,16 @@ describe("template storage", () => {
     expect(loaded).toEqual([]);
   });
 
-  it("preserves multiple templates", async () => {
-    const first = createTemplate("Electrical Test", ["voltage", "current"]);
+  it("preserves repeated fields and unit overrides", async () => {
+    const first = createTemplate("Electrical Test", [
+      { id: "sample", fieldId: "voltage", unit: "V" },
+      { id: "detector", fieldId: "voltage", unit: "mV" },
+    ]);
 
-    const second = createTemplate("Timing Test", ["elapsedTime", "value"]);
+    const second = createTemplate("Timing Test", [
+      { id: "elapsed", fieldId: "elapsed-time" },
+      { id: "temperature", fieldId: "temperature", unit: "°F" },
+    ]);
 
     await saveTemplates([first, second]);
 

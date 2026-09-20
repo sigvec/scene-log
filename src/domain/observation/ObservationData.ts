@@ -11,6 +11,7 @@ export interface ObservationData {
       fieldId: string;
       valueType: "number" | "duration";
       value: number;
+      unit?: string | null;
     }>;
   }>;
 }

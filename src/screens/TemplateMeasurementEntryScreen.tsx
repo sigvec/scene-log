@@ -38,18 +38,23 @@ export function TemplateMeasurementEntryScreen({
   onBack,
   onSave,
 }: TemplateMeasurementEntryScreenProps) {
-  const fields = template.fieldIds.map((fieldId) => getFieldById(fieldId));
+  const fields = template.fields.map((templateField) => ({
+    templateField,
+    field: getFieldById(templateField.fieldId),
+    unit: templateField.unit ?? getFieldById(templateField.fieldId).unit,
+  }));
   const [values, setValues] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const inputRefs = useRef<Array<TextInput | null>>([]);
 
   function handleSubmit() {
     const invalidField = fields.find(
-      (field) => !isValidValue(field.id, values[field.id] ?? ""),
+      ({ field, templateField }) =>
+        !isValidValue(field.id, values[templateField.id] ?? ""),
     );
 
     if (invalidField) {
-      setError(`Enter a valid value for ${invalidField.name}.`);
+      setError(`Enter a valid value for ${invalidField.field.name}.`);
       return;
     }
 
@@ -95,21 +100,21 @@ export function TemplateMeasurementEntryScreen({
       </Text>
 
       <View style={styles.fieldList}>
-        {fields.map((field, index) => (
-          <View key={field.id} style={styles.fieldRow}>
+        {fields.map(({ templateField, field, unit }, index) => (
+          <View key={templateField.id} style={styles.fieldRow}>
             <View style={styles.fieldHeader}>
               <Text style={styles.fieldName}>{field.name}</Text>
-              {field.unit && <Text style={styles.fieldUnit}>{field.unit}</Text>}
+              {unit && <Text style={styles.fieldUnit}>{unit}</Text>}
             </View>
 
             <TextInput
               ref={(ref) => {
                 inputRefs.current[index] = ref;
               }}
-              value={values[field.id] ?? ""}
+              value={values[templateField.id] ?? ""}
               onChangeText={(value) => {
                 setError(null);
-                setValues((current) => ({ ...current, [field.id]: value }));
+                setValues((current) => ({ ...current, [templateField.id]: value }));
               }}
               keyboardType={
                 field.valueType === "duration" ? "default" : "decimal-pad"

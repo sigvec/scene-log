@@ -1,4 +1,4 @@
-import { BUILT_IN_FIELDS, FIELD_LIST, getFieldById } from "./builtInFields";
+import { BUILT_IN_FIELDS, FIELD_LIST, getFieldById, getUnitsForField } from "./builtInFields";
 
 describe("BUILT_IN_FIELDS", () => {
   it("defines the built-in Value field", () => {
@@ -24,6 +24,14 @@ describe("BUILT_IN_FIELDS", () => {
     expect(BUILT_IN_FIELDS.current.unit).toBe("A");
     expect(BUILT_IN_FIELDS.frequency.unit).toBe("Hz");
     expect(BUILT_IN_FIELDS.temperature.unit).toBe("°C");
+  });
+
+  it("defines supported unit choices", () => {
+    expect(getUnitsForField("voltage")).toEqual(["V", "mV", "kV"]);
+    expect(getUnitsForField("current")).toEqual(["A", "mA", "µA"]);
+    expect(getUnitsForField("frequency")).toEqual(["Hz", "kHz", "MHz"]);
+    expect(getUnitsForField("temperature")).toEqual(["°C", "°F", "K"]);
+    expect(getUnitsForField("elapsed-time")).toEqual([]);
   });
 
   it("returns the built-in field by id", () => {

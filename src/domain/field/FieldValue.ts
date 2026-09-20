@@ -3,6 +3,8 @@ import type { FieldValueType } from "./FieldValueType";
 export interface FieldValue {
   fieldId: string;
   valueType: FieldValueType;
-  /** Number fields store their numeric value; duration fields store milliseconds. */
+  /** Numeric value; duration fields store milliseconds. */
   value: number;
+  /** Unit used for this recorded value. Omitted for legacy values. */
+  unit?: string | null;
 }

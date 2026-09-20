@@ -48,8 +48,21 @@ export const FIELD_LIST: Field[] = [
   BUILT_IN_FIELDS.elapsedTime,
 ];
 
+const FIELD_UNITS: Record<string, string[]> = {
+  value: [],
+  voltage: ["V", "mV", "kV"],
+  current: ["A", "mA", "µA"],
+  frequency: ["Hz", "kHz", "MHz"],
+  temperature: ["°C", "°F", "K"],
+  "elapsed-time": [],
+};
+
 export function getFieldById(fieldId: string): Field {
   return (
     FIELD_LIST.find((field) => field.id === fieldId) ?? BUILT_IN_FIELDS.value
   );
+}
+
+export function getUnitsForField(fieldId: string): string[] {
+  return [...(FIELD_UNITS[fieldId] ?? [])];
 }

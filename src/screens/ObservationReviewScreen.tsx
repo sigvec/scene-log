@@ -75,7 +75,7 @@ export function ObservationReviewScreen({
                           {field.name}: {fieldValue.valueType === "duration"
                             ? formatDuration(fieldValue.value)
                             : fieldValue.value}
-                          {field.unit ? ` ${field.unit}` : ""}
+                          {fieldValue.unit ?? field.unit ? ` ${fieldValue.unit ?? field.unit}` : ""}
                         </Text>
                       </View>
                     );

@@ -30,6 +30,7 @@ describe("createCapture", () => {
         fieldId: "value",
         valueType: "number",
         value: 12.4,
+        unit: null,
       },
     ];
 
@@ -49,11 +50,13 @@ describe("createCapture", () => {
           fieldId: "voltage",
           valueType: "number",
           value: 5.02,
+          unit: "V",
         },
         {
           fieldId: "elapsed-time",
           valueType: "duration",
           value: 92_000,
+          unit: null,
         },
       ],
       "file:///data/images/test.jpg",
@@ -86,6 +89,7 @@ describe("observation serialization", () => {
           fieldId: "value",
           valueType: "number",
           value: 12.4,
+          unit: null,
         },
       ],
       "file:///data/images/test.jpg",
@@ -113,7 +117,7 @@ describe("legacy observation image migration", () => {
           id: "capture-1",
           createdAt: "2026-09-15T00:00:01.000Z",
           fieldValues: [
-            { fieldId: "value", valueType: "number" as const, value: 12.4 },
+            { fieldId: "value", valueType: "number" as const, value: 12.4, unit: null },
           ],
         },
       ],

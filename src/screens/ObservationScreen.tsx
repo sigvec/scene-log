@@ -10,7 +10,7 @@ import {
 
 import type { Observation } from "../domain/observation/Observation";
 import type { Template } from "../domain/template/Template";
-import { FIELD_LIST, getFieldById } from "../domain/field/builtInFields";
+import { FIELD_LIST, getFieldById, getUnitsForField } from "../domain/field/builtInFields";
 import { formatDuration, parseDuration } from "../domain/field/duration";
 import type { TextRegion } from "../services/ocr/TextRegion";
 
@@ -29,6 +29,7 @@ interface ObservationScreenProps {
   textRegions: TextRegion[];
   selectedRegionIndex: number | null;
   selectedFieldId: string;
+  selectedUnit: string | null;
   editedValue: string;
   cameraStatus: string | null;
   manualEntry: boolean;
@@ -37,6 +38,7 @@ interface ObservationScreenProps {
   onContainerLayout: (width: number, height: number) => void;
   onSelectRegion: (index: number, value: string) => void;
   onFieldChange: (fieldId: string) => void;
+  onUnitChange: (unit: string | null) => void;
   onValueChange: (value: string) => void;
   onSaveValue: () => void;
   onManualEntry: () => void;
@@ -47,6 +49,7 @@ interface ObservationScreenProps {
     fieldValueIndex: number,
     fieldId: string,
     value: number,
+    unit: string | null | undefined,
   ) => void;
   onSaveEditedMeasurement: () => void;
   onDeleteMeasurement: (captureId: string, fieldValueIndex: number) => void;
@@ -98,6 +101,7 @@ export function ObservationScreen({
   textRegions,
   selectedRegionIndex,
   selectedFieldId,
+  selectedUnit,
   editedValue,
   cameraStatus,
   manualEntry,
@@ -106,6 +110,7 @@ export function ObservationScreen({
   onContainerLayout,
   onSelectRegion,
   onFieldChange,
+  onUnitChange,
   onValueChange,
   onSaveValue,
   onManualEntry,
@@ -249,9 +254,7 @@ export function ObservationScreen({
                         })()
                       : (parseNumericValue(selectedRegion.text)?.toString() ??
                         "—")}
-                    {getFieldById(selectedFieldId).unit
-                      ? ` ${getFieldById(selectedFieldId).unit}`
-                      : ""}
+                    {selectedUnit ? ` ${selectedUnit}` : ""}
                   </Text>
                 </View>
               </View>
@@ -279,11 +282,41 @@ export function ObservationScreen({
                   ]}
                 >
                   {field.name}
-                  {field.unit ? ` (${field.unit})` : ""}
                 </Text>
               </Pressable>
             ))}
           </View>
+
+          {getFieldById(selectedFieldId).valueType === "number" &&
+            getFieldById(selectedFieldId).unit &&
+            getUnitsForField(selectedFieldId).length > 0 && (
+              <View style={styles.unitSection}>
+                <Text style={styles.fieldLabel}>Unit</Text>
+                <View style={styles.fieldSelector}>
+                  {getUnitsForField(selectedFieldId).map((unit) => (
+                    <Pressable
+                      key={unit}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: selectedUnit === unit }}
+                      style={[
+                        styles.fieldOption,
+                        selectedUnit === unit && styles.fieldOptionSelected,
+                      ]}
+                      onPress={() => onUnitChange(unit)}
+                    >
+                      <Text
+                        style={[
+                          styles.fieldOptionText,
+                          selectedUnit === unit && styles.fieldOptionTextSelected,
+                        ]}
+                      >
+                        {unit}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            )}
 
           <Text style={styles.editValueLabel}>
             {editingMeasurement
@@ -291,9 +324,7 @@ export function ObservationScreen({
               : manualEntry
                 ? "Enter value"
                 : "Edit value"}
-            {getFieldById(selectedFieldId).unit
-              ? ` (${getFieldById(selectedFieldId).unit})`
-              : ""}
+            {selectedUnit ? ` (${selectedUnit})` : ""}
           </Text>
 
           <TextInput
@@ -395,19 +426,24 @@ export function ObservationScreen({
                               fieldValueIndex,
                               fieldValue.fieldId,
                               fieldValue.value,
+                              fieldValue.unit ?? field.unit,
                             )
                           }
                         >
                           <Text style={styles.measurementField}>
                             {field.name}
-                            {field.unit ? ` (${field.unit})` : ""}
+                            {fieldValue.unit ?? field.unit
+                              ? ` (${fieldValue.unit ?? field.unit})`
+                              : ""}
                           </Text>
 
                           <Text style={styles.measurementValue}>
                             {fieldValue.valueType === "duration"
                               ? formatDuration(fieldValue.value)
                               : fieldValue.value}
-                            {field.unit ? ` ${field.unit}` : ""}
+                            {fieldValue.unit ?? field.unit
+                              ? ` ${fieldValue.unit ?? field.unit}`
+                              : ""}
                           </Text>
                         </Pressable>
 
@@ -629,6 +665,10 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "700",
     color: "#222",
+  },
+
+  unitSection: {
+    marginTop: 4,
   },
 
   fieldLabel: {
