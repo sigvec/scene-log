@@ -4,15 +4,13 @@ SceneLog is a mobile app for recording observations from the physical world.
 
 It is designed with laboratory and experimental work in mind, where measurements and instrument readings often need to be captured alongside the physical setup in which they were taken. It is not limited to laboratory use, however, and can be used wherever observations of the physical world need to be recorded and organized.
 
-Capture a scene with the camera, use on-device OCR to identify readings, review the recognized text and extracted values, edit the values if necessary, and build a collection of measurements within an observation.
-
-The project is being developed with an emphasis on clear domain modelling, local persistence, and a practical mobile workflow.
+The application is organized around Projects, Scenes, Observations, Captures, and Field Values, allowing users to choose how much structure is useful for a particular piece of work.
 
 ## Current status
 
-**v0.4 — Templates and structured capture**
+**v0.5 — Projects and Scenes**
 
-SceneLog currently supports typed measurement fields, optional units, duration measurements, OCR-derived or manually entered values, reusable templates, local persistence, editing, and deletion.
+SceneLog currently supports typed measurement fields, optional units, duration measurements, reusable capture templates, project and scene organization, OCR-derived or manually entered values, local persistence, editing, and deletion.
 
 The current built-in fields are:
 
@@ -23,25 +21,31 @@ The current built-in fields are:
 - **Temperature** — degrees Celsius (°C)
 - **Elapsed Time** — a duration stored internally in milliseconds
 
-Templates provide reusable capture workflows by defining one or more field slots. Each slot can specify:
+## Organization model
 
-- An underlying field
-- An optional custom label
-- An optional unit override
-
-This allows a template to represent workflows such as:
+SceneLog uses the following hierarchy:
 
 ```text
-Sample voltage     → Voltage / V
-Detector voltage   → Voltage / V
-Current            → Current / mA
+Project
+  └── Scene
+       └── Observation
+            └── Capture
+                 └── FieldValue
 ```
 
-Template fields have their own stable identities, allowing the same underlying field to appear multiple times in a template while remaining independently identifiable.
+- **Project** — organizes a complete piece of work, such as a research project or investigation.
+- **Scene** — provides context within a project. A scene might represent an experiment, sample, setup, experimental phase, or another useful grouping chosen by the user.
+- **Observation** — records one instance of collected information within a scene.
+- **Capture** — represents an individual acquisition event within an observation and can contain one or more field values.
+- **FieldValue** — an individual typed value such as `5.02 V` or `1:32`.
+
+Projects can contain multiple Scenes, and Scenes can contain multiple Observations. The model does not impose a particular interpretation of what a Scene represents; users can organize their work according to the context that is useful to them.
 
 ## Features
 
-- Create observations
+- Create and organize Projects
+- Create multiple Scenes within a Project
+- Add Observations to a Scene
 - Capture and persist associated images locally
 - On-device OCR using ML Kit
 - Display detected text regions over captured images
@@ -50,67 +54,52 @@ Template fields have their own stable identities, allowing the same underlying f
   - Recognized text
   - Field-aware interpretation of the reading
   - Editable value
-
 - Select individual fields for measurements
-- Create reusable templates containing multiple field slots
+- Create reusable capture templates containing multiple field slots
 - Assign custom labels to template fields
-- Override the default unit for individual template fields
-- Convert values when changing between compatible units
-- Support multiple instances of the same field within a template
+- Override units for individual template fields
+- Convert values between compatible units
+- Support multiple instances of the same field in a template
 - Enter template measurements manually
 - Capture template measurements using the camera and OCR
-- Review OCR results and matched template fields before saving
+- Review OCR results before saving template captures
 - Preserve template field identity with captured values
 - Elapsed-time measurements using timer notation such as `1:30` or `1.30`
 - Store duration values canonically as milliseconds
 - Edit existing measurements
 - Change the field associated with an existing measurement
 - Manually enter a value when OCR does not produce a usable result
-- Record multiple captures within a single observation
-- Mix individual field captures and template-based captures within the same observation
+- Record multiple captures in a single observation
+- Mix individual field captures and template-based captures within an observation
 - Review completed observations
-- Persist observations and captured images locally
-- Restore observations after restarting the app
+- Persist projects, scenes, observations, templates, and captured images locally
+- Restore data after restarting the app
 - Delete observations and their associated stored images
-- Confirmation before destructive deletion
+- Prevent deletion of projects or scenes that still contain child data
+- Migrate legacy observations into a default project and scene
 
 ## Example workflow
 
-A simple single-field capture can follow this workflow:
+A project might contain several experimental contexts:
 
 ```text
-Capture image
-     ↓
-Detect text with on-device OCR
-     ↓
-Select a reading
-     ↓
-Recognized text → Field-aware value
-     ↓
-Edit if necessary
-     ↓
-Save capture
+Project: Battery characterization
+
+├── Scene: Cell A
+│    ├── Observation
+│    ├── Observation
+│    └── Observation
+│
+├── Scene: Cell B
+│    ├── Observation
+│    └── Observation
+│
+└── Scene: High-current test
+     ├── Observation
+     └── Observation
 ```
 
-A template capture can acquire several related values from the same image:
-
-```text
-Select template
-     ↓
-Capture image
-     ↓
-Detect text with on-device OCR
-     ↓
-Match readings to template fields
-     ↓
-Review extracted values
-     ↓
-Edit if necessary
-     ↓
-Save as one capture
-```
-
-A single observation can contain multiple captures:
+Within an observation, captures can contain one or more values:
 
 ```text
 Observation
@@ -126,6 +115,22 @@ Observation
       └── Elapsed Time: 1:35
 ```
 
+## Templates
+
+SceneLog has two deliberately different levels of structure.
+
+**Capture Templates** describe what to extract or enter during a particular acquisition. A template can contain several independently identified field slots, including repeated instances of the same underlying field.
+
+For example:
+
+```text
+Sample voltage     → Voltage / V
+Detector voltage   → Voltage / V
+Current            → Current / mA
+```
+
+A future Scene-level observation structure can build on this model to describe expected data across a series of observations without restricting observations to only those fields. This will provide a foundation for identifying corresponding values when reviewing or plotting experimental data.
+
 ## Technology
 
 - **React Native**
@@ -140,54 +145,33 @@ The application currently uses local device storage rather than a backend.
 
 ## Architecture
 
-SceneLog separates the core observation model from application services and UI.
+SceneLog separates the core domain model from application services and UI.
 
 The core domain consists of:
 
-- **Observation** — a recorded unit of collected information.
-- **Capture** — an individual acquisition/input within an observation. A capture can contain one or more field values.
+- **Project** — top-level organization for a piece of work.
+- **Scene** — contextual grouping within a Project.
+- **Observation** — a recorded unit of collected information within a Scene.
+- **Capture** — an acquisition/input within an Observation.
 - **FieldValue** — a typed value associated with a field definition and, when applicable, a template field.
 - **Field** — identifies the meaning and representation of a value, including its value type and default unit.
 - **FieldValueType** — defines how a field value is represented; the current implementation supports numeric values and durations.
 - **Template** — a reusable capture workflow containing one or more template field slots.
 - **TemplateField** — a template-specific field slot with its own identity, underlying field, optional label, and optional unit override.
 
-Templates are associated with captures rather than observations. An observation therefore remains unrestricted: individual field captures and template-based captures can be combined freely within the same observation.
+Projects and Scenes are persisted separately from Observations. Observations retain their Scene identifier, allowing the application to filter observations by context without duplicating the observation data inside Scene records.
 
-The separation between `TemplateField` identity and the underlying `Field` also allows the same field to appear multiple times in one template without losing the identity of each slot.
-
-The domain is intentionally more general than the current UI, leaving room for future user-defined fields, richer capture workflows, scenes, and additional observation types.
-
-## Units and values
-
-Built-in numeric fields have default units, while templates can override those units for individual field slots.
-
-Supported unit choices currently include:
-
-- **Voltage:** V, mV, kV
-- **Current:** A, mA, µA
-- **Frequency:** Hz, kHz, MHz
-- **Temperature:** °C, °F, K
-
-Compatible unit conversions are applied consistently across manual entry, OCR capture, editing, and template workflows.
-
-Duration fields use timer-oriented input such as:
-
-```text
-1:30
-1.30
-1:30.125
-```
-
-These represent 1 minute 30 seconds, 1 minute 30 seconds, and 1 minute 30.125 seconds respectively. Duration values are stored internally as milliseconds.
+The domain is intentionally more general than the current UI, leaving room for future Scene-level expected observation structures, user-defined fields, richer analysis, and additional observation types.
 
 ## Local storage
 
-Observations and templates are serialized before being stored locally. Dates are represented as ISO 8601 strings in persisted data and reconstructed as `Date` objects when loaded.
+Projects, Scenes, Observations, and Templates are serialized before being stored locally. Dates are represented as ISO 8601 strings in persisted data and reconstructed as `Date` objects when loaded.
 
 Captured images are copied from their temporary camera location into the application's private document storage. A capture retains the stored source image URI, allowing the image to remain available after the original camera result is gone.
 
-Deleting an observation also removes its associated stored image.
+Deleting an observation also removes its associated stored image. Projects and Scenes cannot currently be deleted while they contain child data.
+
+Legacy observations that predate Projects and Scenes are assigned to a generated `General Project` and `General Scene` during migration.
 
 ## Testing
 
@@ -211,8 +195,8 @@ The test suite covers:
 
 Future work may include:
 
-- **Scenes** — organize observations within experimental or real-world contexts
-- **History and analysis** — review measurement history and identify trends
+- **Scene observation structures** — reusable definitions of expected fields across a series of observations while retaining the freedom to add arbitrary observations or values
+- **History and analysis** — review measurement history, identify corresponding values, and identify trends
 - **Smarter acquisition and OCR** — improve reading interpretation and acquisition workflows
 - **User-defined fields**
 - **Additional capture types**

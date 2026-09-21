@@ -8,6 +8,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  View,
 } from "react-native";
 import { ObservationScreen } from "./src/screens/ObservationScreen";
 import type { Observation } from "./src/domain/observation/Observation";
@@ -44,8 +45,18 @@ import { TemplateEditorScreen } from "./src/screens/TemplateEditorScreen";
 import { ObservationTemplatePickerScreen } from "./src/screens/ObservationTemplatePickerScreen";
 import { TemplateMeasurementEntryScreen } from "./src/screens/TemplateMeasurementEntryScreen";
 import { TemplateCaptureReviewScreen } from "./src/screens/TemplateCaptureReviewScreen";
+import type { Project } from "./src/domain/project/Project";
+import { createProject } from "./src/domain/project/createProject";
+import type { Scene } from "./src/domain/scene/Scene";
+import { createScene } from "./src/domain/scene/createScene";
+import { loadProjects, saveProjects } from "./src/services/storage/projectStorage";
+import { loadScenes, saveScenes } from "./src/services/storage/sceneStorage";
+import { ProjectListScreen } from "./src/screens/ProjectListScreen";
+import { SceneListScreen } from "./src/screens/SceneListScreen";
+import { ProjectEditorScreen } from "./src/screens/ProjectEditorScreen";
+import { SceneEditorScreen } from "./src/screens/SceneEditorScreen";
 
-type AppScreen = "observations" | "templates" | "templateEditor";
+type AppScreen = "projects" | "scenes" | "observations" | "templates" | "templateEditor" | "projectEditor" | "sceneEditor";
 
 function parseNumericValueFromOcr(text: string): string {
   const match = text.match(/[-+]?(?:\d+(?:\.\d*)?|\.\d+)/);
@@ -103,7 +114,19 @@ function parseOcrValueForField(
 }
 
 export default function App() {
-  const [currentScreen, setCurrentScreen] = useState<AppScreen>("observations");
+  const [currentScreen, setCurrentScreen] = useState<AppScreen>("projects");
+
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [scenes, setScenes] = useState<Scene[]>([]);
+  const [activeProject, setActiveProject] = useState<Project | null>(null);
+  const [activeScene, setActiveScene] = useState<Scene | null>(null);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [editingScene, setEditingScene] = useState<Scene | null>(null);
+  const [projectName, setProjectName] = useState("");
+  const [sceneName, setSceneName] = useState("");
+  const [sceneDescription, setSceneDescription] = useState("");
+  const [projectsLoaded, setProjectsLoaded] = useState(false);
+  const [scenesLoaded, setScenesLoaded] = useState(false);
 
   const [templates, setTemplates] = useState<Template[]>([]);
   const [templatesLoaded, setTemplatesLoaded] = useState(false);
@@ -436,7 +459,11 @@ export default function App() {
     setCameraStatus(null);
     setManualEntry(false);
 
-    const observation = createObservation();
+    if (!activeScene) {
+      return;
+    }
+
+    const observation = createObservation(activeScene.id);
 
     setImageSize(null);
     setContainerSize(null);
@@ -703,22 +730,59 @@ export default function App() {
   const [manualEntry, setManualEntry] = useState(false);
 
   useEffect(() => {
-    async function loadSavedObservations() {
-      const savedObservations = await loadObservations();
-      setObservations(savedObservations);
+    async function loadWorkspace() {
+      const [savedProjects, savedScenes, savedObservations] = await Promise.all([
+        loadProjects(),
+        loadScenes(),
+        loadObservations(),
+      ]);
+
+      let nextProjects = savedProjects;
+      let nextScenes = savedScenes;
+      let nextObservations = savedObservations;
+
+      const orphaned = nextObservations.some((observation) => !observation.sceneId);
+      if (orphaned) {
+        let migrationProject = nextProjects[0];
+        if (!migrationProject) {
+          migrationProject = createProject("General Project");
+          nextProjects = [migrationProject];
+        }
+        let migrationScene = nextScenes.find((scene) => scene.projectId === migrationProject.id);
+        if (!migrationScene) {
+          migrationScene = createScene(migrationProject.id, "General Scene", "Migrated observations without a scene.");
+          nextScenes = [...nextScenes, migrationScene];
+        }
+        nextObservations = nextObservations.map((observation) =>
+          observation.sceneId ? observation : { ...observation, sceneId: migrationScene!.id },
+        );
+      }
+
+      setProjects(nextProjects);
+      setScenes(nextScenes);
+      setObservations(nextObservations);
+      setProjectsLoaded(true);
+      setScenesLoaded(true);
       setObservationsLoaded(true);
     }
 
-    loadSavedObservations();
+    loadWorkspace();
   }, []);
 
   useEffect(() => {
-    if (!observationsLoaded) {
-      return;
-    }
-
-    saveObservations(observations);
+    if (!observationsLoaded) return;
+    void saveObservations(observations);
   }, [observations, observationsLoaded]);
+
+  useEffect(() => {
+    if (!projectsLoaded) return;
+    void saveProjects(projects);
+  }, [projects, projectsLoaded]);
+
+  useEffect(() => {
+    if (!scenesLoaded) return;
+    void saveScenes(scenes);
+  }, [scenes, scenesLoaded]);
 
   useEffect(() => {
     async function loadSavedTemplates() {
@@ -983,6 +1047,74 @@ export default function App() {
           />
         )}
 
+        {currentScreen === "projects" && !activeObservation && !reviewObservation && (
+          <ProjectListScreen
+            projects={projects}
+            scenes={scenes}
+            onNewProject={() => { setEditingProject(null); setProjectName(""); setCurrentScreen("projectEditor"); }}
+            onSelectProject={(project) => { setActiveProject(project); setCurrentScreen("scenes"); }}
+            onEditProject={(project) => { setEditingProject(project); setProjectName(project.name); setCurrentScreen("projectEditor"); }}
+            onDeleteProject={(project) => setProjects((current) => current.filter((item) => item.id !== project.id))}
+          />
+        )}
+
+        {currentScreen === "projectEditor" && !activeObservation && !reviewObservation && (
+          <ProjectEditorScreen
+            title={editingProject ? "Edit Project" : "New Project"}
+            name={projectName}
+            onBack={() => setCurrentScreen("projects")}
+            onNameChange={setProjectName}
+            onSave={() => {
+              const name = projectName.trim();
+              if (!name) return;
+              if (editingProject) {
+                const updated = { ...editingProject, name, updatedAt: new Date() };
+                setProjects((current) => current.map((item) => item.id === updated.id ? updated : item));
+              } else {
+                const project = createProject(name);
+                setProjects((current) => [...current, project]);
+              }
+              setCurrentScreen("projects");
+            }}
+          />
+        )}
+
+        {currentScreen === "scenes" && activeProject && !activeObservation && !reviewObservation && (
+          <SceneListScreen
+            projectName={activeProject.name}
+            scenes={scenes.filter((scene) => scene.projectId === activeProject.id)}
+            observations={observations}
+            onBack={() => { setActiveProject(null); setCurrentScreen("projects"); }}
+            onNewScene={() => { setEditingScene(null); setSceneName(""); setSceneDescription(""); setCurrentScreen("sceneEditor"); }}
+            onSelectScene={(scene) => { setActiveScene(scene); setCurrentScreen("observations"); }}
+            onEditScene={(scene) => { setEditingScene(scene); setSceneName(scene.name); setSceneDescription(scene.description ?? ""); setCurrentScreen("sceneEditor"); }}
+            onDeleteScene={(scene) => setScenes((current) => current.filter((item) => item.id !== scene.id))}
+          />
+        )}
+
+        {currentScreen === "sceneEditor" && activeProject && !activeObservation && !reviewObservation && (
+          <SceneEditorScreen
+            title={editingScene ? "Edit Scene" : "New Scene"}
+            name={sceneName}
+            description={sceneDescription}
+            onBack={() => setCurrentScreen("scenes")}
+            onNameChange={setSceneName}
+            onDescriptionChange={setSceneDescription}
+            onSave={() => {
+              const name = sceneName.trim();
+              if (!name) return;
+              if (editingScene) {
+                const updated = { ...editingScene, name, ...(sceneDescription.trim() ? { description: sceneDescription.trim() } : { description: undefined }), updatedAt: new Date() };
+                setScenes((current) => current.map((item) => item.id === updated.id ? updated : item));
+              } else {
+                const scene = createScene(activeProject.id, name, sceneDescription);
+                setScenes((current) => [...current, scene]);
+              }
+              setCurrentScreen("scenes");
+            }}
+          />
+        )}
+
         {currentScreen === "templates" &&
           !activeObservation &&
           !reviewObservation && (
@@ -1039,19 +1171,23 @@ export default function App() {
           />
         )}
 
-        {currentScreen === "observations" &&
+        {currentScreen === "observations" && activeScene &&
           !observationTemplatePickerOpen &&
           !activeObservation &&
           !reviewObservation && (
             <>
-              <Pressable
-                style={styles.templatesButton}
-                onPress={handleOpenTemplates}
-              >
-                <Text style={styles.templatesButtonText}>Templates</Text>
-              </Pressable>
+              <View style={styles.sceneNav}>
+                <Pressable onPress={() => { setActiveScene(null); setCurrentScreen("scenes"); }} style={styles.backLink}>
+                  <Text style={styles.backLinkText}>{activeProject?.name ?? "Project"} / Scenes</Text>
+                </Pressable>
+                <Pressable style={styles.templatesButton} onPress={handleOpenTemplates}>
+                  <Text style={styles.templatesButtonText}>Templates</Text>
+                </Pressable>
+              </View>
+              <Text style={styles.sceneTitle}>{activeScene.name}</Text>
+              {activeScene.description ? <Text style={styles.sceneDescription}>{activeScene.description}</Text> : null}
               <ObservationListScreen
-                observations={observations}
+                observations={observations.filter((observation) => observation.sceneId === activeScene.id)}
                 templates={templates}
                 onNewObservation={handleNewObservation}
                 onSelectObservation={setReviewObservation}
@@ -1103,5 +1239,30 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: "#444",
+  },
+  sceneNav: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  backLink: {
+    paddingVertical: 8,
+    paddingRight: 12,
+  },
+  backLinkText: {
+    fontSize: 15,
+    color: "#555",
+  },
+  sceneTitle: {
+    fontSize: 28,
+    fontWeight: "700",
+    marginBottom: 6,
+  },
+  sceneDescription: {
+    marginBottom: 18,
+    fontSize: 15,
+    lineHeight: 22,
+    color: "#666",
   },
 });

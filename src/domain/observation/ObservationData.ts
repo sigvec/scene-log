@@ -1,5 +1,6 @@
 export interface ObservationData {
   id: string;
+  sceneId?: string;
   createdAt: string;
   imageUri?: string;
   captures: Array<{

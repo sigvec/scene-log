@@ -6,6 +6,7 @@ export function serializeObservation(
 ): ObservationData {
   return {
     id: observation.id,
+    ...(observation.sceneId ? { sceneId: observation.sceneId } : {}),
     createdAt: observation.createdAt.toISOString(),
     captures: observation.captures.map((capture) => ({
       id: capture.id,

@@ -37,6 +37,7 @@ export function deserializeObservation(data: ObservationData): Observation {
 
   return {
     id: data.id,
+    ...(data.sceneId ? { sceneId: data.sceneId } : {}),
     createdAt: new Date(data.createdAt),
     captures,
   };
