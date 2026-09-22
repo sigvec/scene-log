@@ -3,21 +3,26 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Card } from "../components/Card";
 import type { Template } from "../domain/template/Template";
+import type { SceneObservationField } from "../domain/scene/SceneObservationField";
 import { FIELD_LIST, getFieldById } from "../domain/field/builtInFields";
 
 interface ObservationTemplatePickerScreenProps {
   templates: Template[];
+  sceneFields: SceneObservationField[];
   mode: "manual" | "camera";
   onBack: () => void;
   onSelectField: (fieldId: string) => void;
+  onSelectSceneField: (sceneField: SceneObservationField) => void;
   onSelectTemplate: (template: Template) => void;
 }
 
 export function ObservationTemplatePickerScreen({
   templates,
+  sceneFields,
   mode,
   onBack,
   onSelectField,
+  onSelectSceneField,
   onSelectTemplate,
 }: ObservationTemplatePickerScreenProps) {
   return (
@@ -38,6 +43,26 @@ export function ObservationTemplatePickerScreen({
           ? "Choose a field or template for the camera capture."
           : "Choose a single field or use a template to enter a group of related measurements."}
       </Text>
+
+      {sceneFields.length > 0 && (
+        <>
+          <Text style={styles.sectionTitle}>Expected for this scene</Text>
+          {sceneFields.map((sceneField) => {
+            const field = getFieldById(sceneField.fieldId);
+            const unit = sceneField.unit ?? field.unit;
+            return (
+              <Pressable key={sceneField.id} onPress={() => onSelectSceneField(sceneField)}>
+                <Card>
+                  <Text style={styles.optionTitle}>{sceneField.label?.trim() || field.name}</Text>
+                  <Text style={styles.optionDescription}>
+                    {field.name}{unit ? ` · ${unit}` : " · Unitless"}
+                  </Text>
+                </Card>
+              </Pressable>
+            );
+          })}
+        </>
+      )}
 
       <Text style={styles.sectionTitle}>Field</Text>
 

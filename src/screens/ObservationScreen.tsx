@@ -10,6 +10,7 @@ import {
 
 import type { Observation } from "../domain/observation/Observation";
 import type { Template } from "../domain/template/Template";
+import type { SceneObservationField } from "../domain/scene/SceneObservationField";
 import { FIELD_LIST, getFieldById, getUnitsForField } from "../domain/field/builtInFields";
 import { formatDuration, parseDuration } from "../domain/field/duration";
 import type { TextRegion } from "../services/ocr/TextRegion";
@@ -17,6 +18,7 @@ import type { TextRegion } from "../services/ocr/TextRegion";
 interface ObservationScreenProps {
   observation: Observation;
   templates: Template[];
+  sceneFields: SceneObservationField[];
   capturedImageUri: string | null;
   imageSize: {
     width: number;
@@ -95,6 +97,7 @@ function isLikelyMeasurement(region: TextRegion): boolean {
 export function ObservationScreen({
   observation,
   templates,
+  sceneFields,
   capturedImageUri,
   imageSize,
   containerSize,
@@ -412,12 +415,15 @@ export function ObservationScreen({
 
                   {capture.fieldValues.map((fieldValue, fieldValueIndex) => {
                     const field = getFieldById(fieldValue.fieldId);
+                    const sceneField = fieldValue.sceneFieldId
+                      ? sceneFields.find((candidate) => candidate.id === fieldValue.sceneFieldId)
+                      : undefined;
                     const templateField = capture.templateId
                       ? templates
                           .find((candidate) => candidate.id === capture.templateId)
                           ?.fields.find((candidate) => candidate.id === fieldValue.templateFieldId)
                       : undefined;
-                    const displayName = templateField?.label?.trim() || field.name;
+                    const displayName = sceneField?.label?.trim() || templateField?.label?.trim() || field.name;
 
                     return (
                       <View

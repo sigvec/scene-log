@@ -4,11 +4,11 @@ SceneLog is a mobile app for recording observations from the physical world.
 
 It is designed with laboratory and experimental work in mind, where measurements and instrument readings often need to be captured alongside the physical setup in which they were taken. It is not limited to laboratory use, however, and can be used wherever observations of the physical world need to be recorded and organized.
 
-The application is organized around Projects, Scenes, Observations, Captures, and Field Values, allowing users to choose how much structure is useful for a particular piece of work.
+The application is organized around Projects, Scenes, Observations, Captures, and Field Values, allowing users to choose how much structure is useful for a particular piece of work. Scenes can also define expected observation values to provide consistent roles across a series without making those values mandatory.
 
 ## Current status
 
-**v0.5 — Projects and Scenes**
+**v0.5 — Projects, Scenes, and expected observation values**
 
 SceneLog currently supports typed measurement fields, optional units, duration measurements, reusable capture templates, project and scene organization, OCR-derived or manually entered values, local persistence, editing, and deletion.
 
@@ -45,6 +45,11 @@ Projects can contain multiple Scenes, and Scenes can contain multiple Observatio
 
 - Create and organize Projects
 - Create multiple Scenes within a Project
+- Define expected observation values for a Scene
+- Give expected observation values stable identities and optional labels
+- Override units for expected observation values
+- Select an expected observation value when recording a measurement
+- Retain the expected-value identity with the recorded FieldValue
 - Add Observations to a Scene
 - Capture and persist associated images locally
 - On-device OCR using ML Kit
@@ -115,7 +120,7 @@ Observation
       └── Elapsed Time: 1:35
 ```
 
-## Templates
+## Templates and expected observation values
 
 SceneLog has two deliberately different levels of structure.
 
@@ -129,7 +134,16 @@ Detector voltage   → Voltage / V
 Current            → Current / mA
 ```
 
-A future Scene-level observation structure can build on this model to describe expected data across a series of observations without restricting observations to only those fields. This will provide a foundation for identifying corresponding values when reviewing or plotting experimental data.
+Scenes can independently define expected observation values. These are stable roles within the Scene, each based on a field and optionally given a user-facing label and unit override. For example:
+
+```text
+Frequency        → Frequency / Hz
+Input voltage    → Voltage / V
+Output voltage   → Voltage / V
+Temperature      → Temperature / °C
+```
+
+When a user records an individual field capture through an expected value, the resulting FieldValue retains that expected-value identity. This provides a foundation for identifying corresponding values across observations while still allowing observations to contain arbitrary additional values.
 
 ## Technology
 
@@ -153,15 +167,16 @@ The core domain consists of:
 - **Scene** — contextual grouping within a Project.
 - **Observation** — a recorded unit of collected information within a Scene.
 - **Capture** — an acquisition/input within an Observation.
-- **FieldValue** — a typed value associated with a field definition and, when applicable, a template field.
+- **FieldValue** — a typed value associated with a field definition and, when applicable, a capture-template field or Scene expected-value field.
 - **Field** — identifies the meaning and representation of a value, including its value type and default unit.
 - **FieldValueType** — defines how a field value is represented; the current implementation supports numeric values and durations.
 - **Template** — a reusable capture workflow containing one or more template field slots.
 - **TemplateField** — a template-specific field slot with its own identity, underlying field, optional label, and optional unit override.
+- **SceneObservationField** — a Scene-specific expected value with its own identity, underlying field, optional label, and optional unit override.
 
 Projects and Scenes are persisted separately from Observations. Observations retain their Scene identifier, allowing the application to filter observations by context without duplicating the observation data inside Scene records.
 
-The domain is intentionally more general than the current UI, leaving room for future Scene-level expected observation structures, user-defined fields, richer analysis, and additional observation types.
+The domain is intentionally more general than the current UI, leaving room for user-defined fields, richer analysis, and additional observation types.
 
 ## Local storage
 
@@ -190,12 +205,13 @@ The test suite covers:
 - Template field configuration
 - Template field labels and unit overrides
 - Backward-compatible template loading
+- Scene expected observation fields
+- Scene expected-value serialization and migration
 
 ## Roadmap
 
 Future work may include:
 
-- **Scene observation structures** — reusable definitions of expected fields across a series of observations while retaining the freedom to add arbitrary observations or values
 - **History and analysis** — review measurement history, identify corresponding values, and identify trends
 - **Smarter acquisition and OCR** — improve reading interpretation and acquisition workflows
 - **User-defined fields**

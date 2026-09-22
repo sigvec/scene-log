@@ -2,12 +2,14 @@ import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { Observation } from "../domain/observation/Observation";
 import type { Template } from "../domain/template/Template";
+import type { SceneObservationField } from "../domain/scene/SceneObservationField";
 import { getFieldById } from "../domain/field/builtInFields";
 import { formatDuration } from "../domain/field/duration";
 
 interface ObservationReviewScreenProps {
   observation: Observation;
   templates: Template[];
+  sceneFields: SceneObservationField[];
   onBack: () => void;
   onDelete: () => void;
 }
@@ -15,6 +17,7 @@ interface ObservationReviewScreenProps {
 export function ObservationReviewScreen({
   observation,
   templates,
+  sceneFields,
   onBack,
   onDelete,
 }: ObservationReviewScreenProps) {
@@ -66,12 +69,15 @@ export function ObservationReviewScreen({
 
                   {capture.fieldValues.map((fieldValue, index) => {
                     const field = getFieldById(fieldValue.fieldId);
+                    const sceneField = fieldValue.sceneFieldId
+                      ? sceneFields.find((candidate) => candidate.id === fieldValue.sceneFieldId)
+                      : undefined;
                     const templateField = capture.templateId
                       ? template?.fields.find(
                           (candidate) => candidate.id === fieldValue.templateFieldId,
                         )
                       : undefined;
-                    const displayName = templateField?.label?.trim() || field.name;
+                    const displayName = sceneField?.label?.trim() || templateField?.label?.trim() || field.name;
                     return (
                       <View
                         key={`${capture.id}-${index}`}

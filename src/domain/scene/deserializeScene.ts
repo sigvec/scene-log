@@ -7,6 +7,7 @@ export function deserializeScene(data: SceneData): Scene {
     projectId: data.projectId,
     name: data.name,
     ...(data.description ? { description: data.description } : {}),
+    observationFields: data.observationFields ?? [],
     createdAt: new Date(data.createdAt),
     updatedAt: new Date(data.updatedAt),
   };

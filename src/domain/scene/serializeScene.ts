@@ -1,4 +1,5 @@
 import type { Scene } from "./Scene";
+import type { SceneObservationField } from "./SceneObservationField";
 
 export interface SceneData {
   id: string;
@@ -7,6 +8,7 @@ export interface SceneData {
   description?: string;
   createdAt: string;
   updatedAt: string;
+  observationFields?: SceneObservationField[];
 }
 
 export function serializeScene(scene: Scene): SceneData {
@@ -17,5 +19,6 @@ export function serializeScene(scene: Scene): SceneData {
     ...(scene.description ? { description: scene.description } : {}),
     createdAt: scene.createdAt.toISOString(),
     updatedAt: scene.updatedAt.toISOString(),
+    observationFields: scene.observationFields,
   };
 }

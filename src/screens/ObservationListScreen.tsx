@@ -4,12 +4,14 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Card } from "../components/Card";
 import type { Observation } from "../domain/observation/Observation";
 import type { Template } from "../domain/template/Template";
+import type { SceneObservationField } from "../domain/scene/SceneObservationField";
 import { getFieldById } from "../domain/field/builtInFields";
 import { formatDuration } from "../domain/field/duration";
 
 interface ObservationListScreenProps {
   observations: Observation[];
   templates: Template[];
+  sceneFields: SceneObservationField[];
   onNewObservation: () => void;
   onSelectObservation: (observation: Observation) => void;
 }
@@ -17,6 +19,7 @@ interface ObservationListScreenProps {
 export function ObservationListScreen({
   observations,
   templates,
+  sceneFields,
   onNewObservation,
   onSelectObservation,
 }: ObservationListScreenProps) {
@@ -32,12 +35,15 @@ export function ObservationListScreen({
         const template = capture.templateId
           ? templates.find((item) => item.id === capture.templateId)
           : undefined;
+        const sceneField = fieldValue.sceneFieldId
+          ? sceneFields.find((candidate) => candidate.id === fieldValue.sceneFieldId)
+          : undefined;
         const templateField = fieldValue.templateFieldId
           ? template?.fields.find(
               (candidate) => candidate.id === fieldValue.templateFieldId,
             )
           : undefined;
-        const displayName = templateField?.label?.trim() || field.name;
+        const displayName = sceneField?.label?.trim() || templateField?.label?.trim() || field.name;
         const unit = fieldValue.unit ?? field.unit;
 
         return `${displayName}: ${value}${unit ? ` ${unit}` : ""}`;

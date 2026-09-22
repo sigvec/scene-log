@@ -48,6 +48,7 @@ import { TemplateCaptureReviewScreen } from "./src/screens/TemplateCaptureReview
 import type { Project } from "./src/domain/project/Project";
 import { createProject } from "./src/domain/project/createProject";
 import type { Scene } from "./src/domain/scene/Scene";
+import type { SceneObservationField } from "./src/domain/scene/SceneObservationField";
 import { createScene } from "./src/domain/scene/createScene";
 import { loadProjects, saveProjects } from "./src/services/storage/projectStorage";
 import { loadScenes, saveScenes } from "./src/services/storage/sceneStorage";
@@ -125,6 +126,7 @@ export default function App() {
   const [projectName, setProjectName] = useState("");
   const [sceneName, setSceneName] = useState("");
   const [sceneDescription, setSceneDescription] = useState("");
+  const [sceneObservationFields, setSceneObservationFields] = useState<SceneObservationField[]>([]);
   const [projectsLoaded, setProjectsLoaded] = useState(false);
   const [scenesLoaded, setScenesLoaded] = useState(false);
 
@@ -161,6 +163,7 @@ export default function App() {
   const [selectedUnit, setSelectedUnit] = useState<string | null>(
     BUILT_IN_FIELDS.value.unit,
   );
+  const [selectedSceneFieldId, setSelectedSceneFieldId] = useState<string | null>(null);
   const [editingMeasurement, setEditingMeasurement] = useState<{
     captureId: string;
     fieldValueIndex: number;
@@ -201,6 +204,7 @@ export default function App() {
       [
         {
           fieldId: field.id,
+          ...(selectedSceneFieldId ? { sceneFieldId: selectedSceneFieldId } : {}),
           valueType: field.valueType,
           value,
           unit: selectedUnit,
@@ -228,6 +232,7 @@ export default function App() {
     setSelectedOcrValue(null);
     setEditedValue("");
     setManualEntry(false);
+    setSelectedSceneFieldId(null);
   }
 
   function handleStartEditingMeasurement(
@@ -310,6 +315,7 @@ export default function App() {
     setEditedValue("");
     setCapturedImageUri(null);
     setEditingMeasurement(null);
+    setSelectedSceneFieldId(null);
   }
 
   function normalizeUnit(text: string): string {
@@ -473,6 +479,7 @@ export default function App() {
     setEditedValue("");
     setSelectedFieldId(BUILT_IN_FIELDS.value.id);
     setSelectedUnit(BUILT_IN_FIELDS.value.unit);
+    setSelectedSceneFieldId(null);
 
     setObservations((current) => [...current, observation]);
     setActiveObservation(observation);
@@ -556,8 +563,18 @@ export default function App() {
     setObservationTemplatePickerOpen(true);
   }
 
+  async function startCameraForSceneField(sceneField: SceneObservationField) {
+    setObservationTemplatePickerOpen(false);
+    setSelectedFieldId(sceneField.fieldId);
+    setSelectedUnit(sceneField.unit ?? getFieldById(sceneField.fieldId).unit);
+    setSelectedSceneFieldId(sceneField.id);
+    setManualEntry(false);
+    await captureImage();
+  }
+
   async function startCameraForField(fieldId: string) {
     setObservationTemplatePickerOpen(false);
+    setSelectedSceneFieldId(null);
     setSelectedFieldId(fieldId);
     setSelectedUnit(getFieldById(fieldId).unit);
     setManualEntry(false);
@@ -916,6 +933,7 @@ export default function App() {
           <ObservationScreen
             observation={activeObservation}
             templates={templates}
+            sceneFields={activeScene?.observationFields ?? []}
             capturedImageUri={capturedImageUri}
             imageSize={imageSize}
             containerSize={containerSize}
@@ -1042,6 +1060,7 @@ export default function App() {
           <ObservationReviewScreen
             observation={reviewObservation}
             templates={templates}
+            sceneFields={scenes.find((scene) => scene.id === reviewObservation.sceneId)?.observationFields ?? []}
             onBack={() => setReviewObservation(null)}
             onDelete={handleDeleteObservation}
           />
@@ -1085,9 +1104,9 @@ export default function App() {
             scenes={scenes.filter((scene) => scene.projectId === activeProject.id)}
             observations={observations}
             onBack={() => { setActiveProject(null); setCurrentScreen("projects"); }}
-            onNewScene={() => { setEditingScene(null); setSceneName(""); setSceneDescription(""); setCurrentScreen("sceneEditor"); }}
+            onNewScene={() => { setEditingScene(null); setSceneName(""); setSceneDescription(""); setSceneObservationFields([]); setCurrentScreen("sceneEditor"); }}
             onSelectScene={(scene) => { setActiveScene(scene); setCurrentScreen("observations"); }}
-            onEditScene={(scene) => { setEditingScene(scene); setSceneName(scene.name); setSceneDescription(scene.description ?? ""); setCurrentScreen("sceneEditor"); }}
+            onEditScene={(scene) => { setEditingScene(scene); setSceneName(scene.name); setSceneDescription(scene.description ?? ""); setSceneObservationFields(scene.observationFields); setCurrentScreen("sceneEditor"); }}
             onDeleteScene={(scene) => setScenes((current) => current.filter((item) => item.id !== scene.id))}
           />
         )}
@@ -1097,17 +1116,19 @@ export default function App() {
             title={editingScene ? "Edit Scene" : "New Scene"}
             name={sceneName}
             description={sceneDescription}
+            observationFields={sceneObservationFields}
             onBack={() => setCurrentScreen("scenes")}
             onNameChange={setSceneName}
             onDescriptionChange={setSceneDescription}
+            onObservationFieldsChange={setSceneObservationFields}
             onSave={() => {
               const name = sceneName.trim();
               if (!name) return;
               if (editingScene) {
-                const updated = { ...editingScene, name, ...(sceneDescription.trim() ? { description: sceneDescription.trim() } : { description: undefined }), updatedAt: new Date() };
+                const updated = { ...editingScene, name, ...(sceneDescription.trim() ? { description: sceneDescription.trim() } : { description: undefined }), observationFields: sceneObservationFields, updatedAt: new Date() };
                 setScenes((current) => current.map((item) => item.id === updated.id ? updated : item));
               } else {
-                const scene = createScene(activeProject.id, name, sceneDescription);
+                const scene = createScene(activeProject.id, name, sceneDescription, sceneObservationFields);
                 setScenes((current) => [...current, scene]);
               }
               setCurrentScreen("scenes");
@@ -1144,8 +1165,24 @@ export default function App() {
         {observationTemplatePickerOpen && !reviewObservation && (
           <ObservationTemplatePickerScreen
             templates={templates}
+            sceneFields={activeScene?.observationFields ?? []}
             mode={measurementPickerMode}
             onBack={() => setObservationTemplatePickerOpen(false)}
+            onSelectSceneField={(sceneField) => {
+              const field = getFieldById(sceneField.fieldId);
+              if (measurementPickerMode === "camera") {
+                void startCameraForSceneField(sceneField);
+                return;
+              }
+              setObservationTemplatePickerOpen(false);
+              setManualEntry(true);
+              setSelectedRegionIndex(null);
+              setSelectedFieldId(sceneField.fieldId);
+              setSelectedUnit(sceneField.unit ?? field.unit);
+              setSelectedSceneFieldId(sceneField.id);
+              setEditedValue("");
+              setCameraStatus(null);
+            }}
             onSelectField={(fieldId) => {
               if (measurementPickerMode === "camera") {
                 void startCameraForField(fieldId);
@@ -1157,6 +1194,7 @@ export default function App() {
               setSelectedRegionIndex(null);
               setSelectedFieldId(fieldId);
               setSelectedUnit(getFieldById(fieldId).unit);
+              setSelectedSceneFieldId(null);
               setEditedValue("");
               setCameraStatus(null);
             }}
@@ -1189,6 +1227,7 @@ export default function App() {
               <ObservationListScreen
                 observations={observations.filter((observation) => observation.sceneId === activeScene.id)}
                 templates={templates}
+                sceneFields={activeScene.observationFields}
                 onNewObservation={handleNewObservation}
                 onSelectObservation={setReviewObservation}
               />
