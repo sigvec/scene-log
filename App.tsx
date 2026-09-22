@@ -49,6 +49,7 @@ import type { Project } from "./src/domain/project/Project";
 import { createProject } from "./src/domain/project/createProject";
 import type { Scene } from "./src/domain/scene/Scene";
 import type { SceneObservationField } from "./src/domain/scene/SceneObservationField";
+import { assignTemplateSceneFields } from "./src/domain/scene/assignTemplateSceneFields";
 import { createScene } from "./src/domain/scene/createScene";
 import { loadProjects, saveProjects } from "./src/services/storage/projectStorage";
 import { loadScenes, saveScenes } from "./src/services/storage/sceneStorage";
@@ -455,6 +456,8 @@ export default function App() {
     imageUri: string;
     regions: TextRegion[];
   } | null>(null);
+  const [templateSceneFieldAssignments, setTemplateSceneFieldAssignments] =
+    useState<Record<string, string | null>>({});
   const [measurementPickerMode, setMeasurementPickerMode] = useState<"manual" | "camera">("manual");
 
   function handleNewObservation() {
@@ -488,13 +491,21 @@ export default function App() {
     setObservationTemplatePickerOpen(false);
   }
 
+  function getInitialTemplateSceneFieldAssignments(template: Template): Record<string, string | null> {
+    return assignTemplateSceneFields(template, activeScene?.observationFields ?? []);
+  }
+
   function startTemplateMeasurementEntry(template: Template) {
     setCameraStatus(null);
     setObservationTemplatePickerOpen(false);
+    setTemplateSceneFieldAssignments(getInitialTemplateSceneFieldAssignments(template));
     setTemplateMeasurementEntry(template);
   }
 
-  function handleSaveTemplateMeasurements(values: Record<string, string>) {
+  function handleSaveTemplateMeasurements(
+    values: Record<string, string>,
+    sceneFieldAssignments: Record<string, string | null>,
+  ) {
     if (!activeObservation || !templateMeasurementEntry) {
       return;
     }
@@ -516,6 +527,9 @@ export default function App() {
       return [{
         fieldId: field.id,
         templateFieldId: templateField.id,
+        ...(sceneFieldAssignments[templateField.id]
+          ? { sceneFieldId: sceneFieldAssignments[templateField.id] as string }
+          : {}),
         valueType: field.valueType,
         value,
         unit: templateField.unit ?? field.unit,
@@ -549,6 +563,7 @@ export default function App() {
     setEditedValue("");
     setManualEntry(false);
     setTemplateMeasurementEntry(null);
+    setTemplateSceneFieldAssignments({});
     setCapturedImageUri(null);
   }
 
@@ -584,10 +599,14 @@ export default function App() {
   async function startCameraForTemplate(template: Template) {
     setObservationTemplatePickerOpen(false);
     setManualEntry(false);
+    setTemplateSceneFieldAssignments(getInitialTemplateSceneFieldAssignments(template));
     await captureImage(template);
   }
 
-  function handleSaveTemplateCapture(values: Record<string, string>) {
+  function handleSaveTemplateCapture(
+    values: Record<string, string>,
+    sceneFieldAssignments: Record<string, string | null>,
+  ) {
     if (!activeObservation || !templateCaptureReview) {
       return;
     }
@@ -605,6 +624,9 @@ export default function App() {
         : [{
             fieldId: field.id,
             templateFieldId: templateField.id,
+            ...(sceneFieldAssignments[templateField.id]
+              ? { sceneFieldId: sceneFieldAssignments[templateField.id] as string }
+              : {}),
             valueType: field.valueType,
             value,
             unit: templateField.unit ?? field.unit,
@@ -632,6 +654,7 @@ export default function App() {
       ),
     );
     setTemplateCaptureReview(null);
+    setTemplateSceneFieldAssignments({});
     resetCaptureState();
   }
 
@@ -894,6 +917,8 @@ export default function App() {
               setTemplateMeasurementEntry(null);
               setObservationTemplatePickerOpen(true);
             }}
+            sceneFields={activeScene?.observationFields ?? []}
+            initialSceneFieldAssignments={templateSceneFieldAssignments}
             onSave={handleSaveTemplateMeasurements}
           />
         )}
@@ -925,6 +950,8 @@ export default function App() {
               setTemplateCaptureReview(null);
               resetCaptureState();
             }}
+            sceneFields={activeScene?.observationFields ?? []}
+            initialSceneFieldAssignments={templateSceneFieldAssignments}
             onSave={handleSaveTemplateCapture}
           />
         )}

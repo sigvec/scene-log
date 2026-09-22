@@ -143,7 +143,7 @@ Output voltage   → Voltage / V
 Temperature      → Temperature / °C
 ```
 
-When a user records an individual field capture through an expected value, the resulting FieldValue retains that expected-value identity. This provides a foundation for identifying corresponding values across observations while still allowing observations to contain arbitrary additional values.
+When a user records an individual field capture through an expected value, the resulting FieldValue retains that expected-value identity. A Capture Template can also be used within a Scene: each template field can be assigned to a compatible Scene expected value, or left unassigned when it is not part of the Scene's expected data series. Unique field matches and matching labels are suggested automatically, while ambiguous matches remain under user control. This provides a foundation for identifying corresponding values across observations while still allowing observations to contain arbitrary additional values.
 
 ## Technology
 
@@ -207,6 +207,7 @@ The test suite covers:
 - Backward-compatible template loading
 - Scene expected observation fields
 - Scene expected-value serialization and migration
+- Template-to-Scene expected-value assignment
 
 ## Roadmap
 

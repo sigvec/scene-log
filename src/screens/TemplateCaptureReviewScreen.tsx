@@ -10,6 +10,8 @@ import {
 } from "react-native";
 
 import type { Template } from "../domain/template/Template";
+import type { SceneObservationField } from "../domain/scene/SceneObservationField";
+import { SceneFieldAssignmentPicker } from "../components/SceneFieldAssignmentPicker";
 import { getFieldById } from "../domain/field/builtInFields";
 import type { TextRegion } from "../services/ocr/TextRegion";
 
@@ -29,7 +31,9 @@ interface TemplateCaptureReviewScreenProps {
   values: Record<string, string>;
   recognizedText: Record<string, string>;
   onBack: () => void;
-  onSave: (values: Record<string, string>) => void;
+  onSave: (values: Record<string, string>, sceneFieldAssignments: Record<string, string | null>) => void;
+  sceneFields: SceneObservationField[];
+  initialSceneFieldAssignments: Record<string, string | null>;
 }
 
 function getContainTransform(
@@ -62,8 +66,11 @@ export function TemplateCaptureReviewScreen({
   recognizedText,
   onBack,
   onSave,
+  sceneFields,
+  initialSceneFieldAssignments,
 }: TemplateCaptureReviewScreenProps) {
   const [values, setValues] = useState(initialValues);
+  const [sceneFieldAssignments, setSceneFieldAssignments] = useState<Record<string, string | null>>(initialSceneFieldAssignments);
   const [imageContainerSize, setImageContainerSize] = useState({
     width: 0,
     height: 0,
@@ -163,6 +170,19 @@ export function TemplateCaptureReviewScreen({
               <Text style={styles.recognizedText}>
                 {recognizedText[templateField.id] || "No matching reading detected"}
               </Text>
+              {sceneFields.some((sceneField) => sceneField.fieldId === templateField.fieldId) && (
+              <SceneFieldAssignmentPicker
+                sceneFields={sceneFields}
+                fieldId={templateField.fieldId}
+                selectedSceneFieldId={sceneFieldAssignments[templateField.id] ?? null}
+                onChange={(sceneFieldId) =>
+                  setSceneFieldAssignments((current) => ({
+                    ...current,
+                    [templateField.id]: sceneFieldId,
+                  }))
+                }
+              />
+            )}
               <TextInput
                 value={values[templateField.id] ?? ""}
                 onChangeText={(value) =>
@@ -178,7 +198,7 @@ export function TemplateCaptureReviewScreen({
         })}
       </View>
 
-      <Pressable style={styles.saveButton} onPress={() => onSave(values)}>
+      <Pressable style={styles.saveButton} onPress={() => onSave(values, sceneFieldAssignments)}>
         <Check size={19} strokeWidth={2.2} color="#fff" />
         <Text style={styles.saveButtonText}>Add Measurement</Text>
       </Pressable>

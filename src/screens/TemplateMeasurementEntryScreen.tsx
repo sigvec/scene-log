@@ -9,13 +9,17 @@ import {
 } from "react-native";
 
 import type { Template } from "../domain/template/Template";
+import type { SceneObservationField } from "../domain/scene/SceneObservationField";
+import { SceneFieldAssignmentPicker } from "../components/SceneFieldAssignmentPicker";
 import { getFieldById } from "../domain/field/builtInFields";
 import { parseDuration } from "../domain/field/duration";
 
 interface TemplateMeasurementEntryScreenProps {
   template: Template;
   onBack: () => void;
-  onSave: (values: Record<string, string>) => void;
+  onSave: (values: Record<string, string>, sceneFieldAssignments: Record<string, string | null>) => void;
+  sceneFields: SceneObservationField[];
+  initialSceneFieldAssignments: Record<string, string | null>;
 }
 
 function isValidValue(fieldId: string, value: string): boolean {
@@ -37,6 +41,8 @@ export function TemplateMeasurementEntryScreen({
   template,
   onBack,
   onSave,
+  sceneFields,
+  initialSceneFieldAssignments,
 }: TemplateMeasurementEntryScreenProps) {
   const fields = template.fields.map((templateField) => ({
     templateField,
@@ -45,6 +51,7 @@ export function TemplateMeasurementEntryScreen({
     label: templateField.label?.trim() || getFieldById(templateField.fieldId).name,
   }));
   const [values, setValues] = useState<Record<string, string>>({});
+  const [sceneFieldAssignments, setSceneFieldAssignments] = useState<Record<string, string | null>>(initialSceneFieldAssignments);
   const [error, setError] = useState<string | null>(null);
   const inputRefs = useRef<Array<TextInput | null>>([]);
 
@@ -68,7 +75,7 @@ export function TemplateMeasurementEntryScreen({
       return;
     }
 
-    onSave(enteredValues);
+    onSave(enteredValues, sceneFieldAssignments);
   }
 
   function focusNext(index: number) {
@@ -107,6 +114,20 @@ export function TemplateMeasurementEntryScreen({
               <Text style={styles.fieldName}>{label}</Text>
               {unit && <Text style={styles.fieldUnit}>{unit}</Text>}
             </View>
+
+            {sceneFields.some((sceneField) => sceneField.fieldId === templateField.fieldId) && (
+              <SceneFieldAssignmentPicker
+              sceneFields={sceneFields}
+              fieldId={templateField.fieldId}
+              selectedSceneFieldId={sceneFieldAssignments[templateField.id] ?? null}
+              onChange={(sceneFieldId) =>
+                setSceneFieldAssignments((current) => ({
+                  ...current,
+                  [templateField.id]: sceneFieldId,
+                }))
+              }
+              />
+            )}
 
             <TextInput
               ref={(ref) => {
