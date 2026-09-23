@@ -11,6 +11,7 @@ export interface ObservationData {
     fieldValues: Array<{
       fieldId: string;
       templateFieldId?: string;
+      sceneFieldId?: string;
       valueType: "number" | "duration";
       value: number;
       unit?: string | null;

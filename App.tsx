@@ -32,7 +32,7 @@ import {
   deleteImageFromStorage,
 } from "./src/services/storage/imageStorage";
 import { ObservationReviewScreen } from "./src/screens/ObservationReviewScreen";
-import { ObservationListScreen } from "./src/screens/ObservationListScreen";
+import { SceneHistoryScreen } from "./src/screens/SceneHistoryScreen";
 import type { Template } from "./src/domain/template/Template";
 import type { TemplateField } from "./src/domain/template/TemplateField";
 import { createTemplate } from "./src/domain/template/createTemplate";
@@ -1251,7 +1251,7 @@ export default function App() {
               </View>
               <Text style={styles.sceneTitle}>{activeScene.name}</Text>
               {activeScene.description ? <Text style={styles.sceneDescription}>{activeScene.description}</Text> : null}
-              <ObservationListScreen
+              <SceneHistoryScreen
                 observations={observations.filter((observation) => observation.sceneId === activeScene.id)}
                 templates={templates}
                 sceneFields={activeScene.observationFields}

@@ -8,7 +8,7 @@ The application is organized around Projects, Scenes, Observations, Captures, an
 
 ## Current status
 
-**v0.5 — Projects, Scenes, and expected observation values**
+**v0.6 — History and analysis foundation**
 
 SceneLog currently supports typed measurement fields, optional units, duration measurements, reusable capture templates, project and scene organization, OCR-derived or manually entered values, local persistence, editing, and deletion.
 
@@ -77,6 +77,8 @@ Projects can contain multiple Scenes, and Scenes can contain multiple Observatio
 - Record multiple captures in a single observation
 - Mix individual field captures and template-based captures within an observation
 - Review completed observations
+- Review a Scene history with expected values shown consistently across observations
+- See missing expected values explicitly while retaining additional ad-hoc values
 - Persist projects, scenes, observations, templates, and captured images locally
 - Restore data after restarting the app
 - Delete observations and their associated stored images
@@ -144,6 +146,12 @@ Temperature      → Temperature / °C
 ```
 
 When a user records an individual field capture through an expected value, the resulting FieldValue retains that expected-value identity. A Capture Template can also be used within a Scene: each template field can be assigned to a compatible Scene expected value, or left unassigned when it is not part of the Scene's expected data series. Unique field matches and matching labels are suggested automatically, while ambiguous matches remain under user control. This provides a foundation for identifying corresponding values across observations while still allowing observations to contain arbitrary additional values.
+
+## History
+
+The Scene history view presents observations in reverse chronological order. Scene-defined expected observation values are shown as consistent roles for each observation, with missing values displayed explicitly rather than treated as errors. Values that are not associated with an expected Scene value remain visible as additional measurements.
+
+This history view is the first layer of the v0.6 analysis workflow. The same Scene expected-value identities will provide the stable relationships needed for later series selection and plotting.
 
 ## Technology
 
