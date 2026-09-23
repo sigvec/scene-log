@@ -10,7 +10,7 @@ The application is organized around Projects, Scenes, Observations, Captures, an
 
 **v0.6 — History and analysis foundation**
 
-SceneLog currently supports typed measurement fields, optional units, duration measurements, reusable capture templates, project and scene organization, OCR-derived or manually entered values, local persistence, editing, and deletion.
+SceneLog currently supports typed measurement fields, optional units, duration measurements, reusable capture templates, project and scene organization, OCR-derived or manually entered values, local persistence, editing, deletion, Scene history, data-series extraction, X/Y series selection, and plotting.
 
 The current built-in fields are:
 
@@ -79,6 +79,11 @@ Projects can contain multiple Scenes, and Scenes can contain multiple Observatio
 - Review completed observations
 - Review a Scene history with expected values shown consistently across observations
 - See missing expected values explicitly while retaining additional ad-hoc values
+- Select Scene expected fields as X and Y axes for a data series
+- Preview extracted X/Y data points across observations
+- Normalize compatible series values to the selected Scene field units
+- Report observations skipped from a series because values are missing, ambiguous, or incompatible
+- Plot selected X/Y data series with labeled axes, units, grid lines, and data points
 - Persist projects, scenes, observations, templates, and captured images locally
 - Restore data after restarting the app
 - Delete observations and their associated stored images
@@ -218,12 +223,15 @@ The test suite covers:
 - Scene expected observation fields
 - Scene expected-value serialization and migration
 - Template-to-Scene expected-value assignment
+- Data-series extraction and validation
+- Unit normalization during series extraction
+- Series handling for missing and ambiguous values
 
 ## Roadmap
 
 Future work may include:
 
-- **History and analysis** — review measurement history, identify corresponding values, and identify trends
+- **Richer analysis** — extend the current history, series, and plotting foundation with additional analysis workflows
 - **Smarter acquisition and OCR** — improve reading interpretation and acquisition workflows
 - **User-defined fields**
 - **Additional capture types**
@@ -254,7 +262,8 @@ SceneLog's goals are to demonstrate:
   <img src="screenshots/MeasurementCapture.jpg" width="350">
 </p>
 
+### Data series
 
-### v0.6 — Data series
-
-Scene history now provides a data-series workflow. Select two Scene expected fields as X and Y axes to preview the extracted series across observations. The series extraction layer handles unit normalization and explicitly reports observations excluded because values are missing, ambiguous, or incompatible. Plotting is intentionally deferred to a later increment.
+<p align="center">
+  <img src="screenshots/DataSeries.jpg" width="350">
+</p>

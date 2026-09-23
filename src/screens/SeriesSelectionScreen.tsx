@@ -3,6 +3,7 @@ import { ArrowLeft, BarChart3, Check, ChevronDown } from "lucide-react-native";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Card } from "../components/Card";
+import { DataSeriesChart } from "../components/DataSeriesChart";
 import type { Observation } from "../domain/observation/Observation";
 import type { SceneObservationField } from "../domain/scene/SceneObservationField";
 import { extractDataSeries, type DataSeries } from "../domain/scene/extractDataSeries";
@@ -164,7 +165,9 @@ export function SeriesSelectionScreen({
               </View>
 
               {series.points.length > 0 ? (
-                <View style={styles.pointsList}>
+                <>
+                  <DataSeriesChart series={series} xField={xField} yField={yField} />
+                  <View style={styles.pointsList}>
                   {series.points.map((point) => (
                     <View key={point.observationId} style={styles.pointRow}>
                       <Text style={styles.pointValue}>
@@ -176,7 +179,8 @@ export function SeriesSelectionScreen({
                       </Text>
                     </View>
                   ))}
-                </View>
+                  </View>
+                </>
               ) : (
                 <Text style={styles.emptyText}>
                   No observations currently contain one usable value for both selected fields.
