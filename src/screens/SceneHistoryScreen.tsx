@@ -1,4 +1,4 @@
-import { ChevronRight, Clock, Plus } from "lucide-react-native";
+import { BarChart3, ChevronRight, Clock, Plus } from "lucide-react-native";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Card } from "../components/Card";
@@ -14,6 +14,7 @@ interface SceneHistoryScreenProps {
   sceneFields: SceneObservationField[];
   onNewObservation: () => void;
   onSelectObservation: (observation: Observation) => void;
+  onOpenSeries: () => void;
 }
 
 function formatFieldValue(
@@ -41,6 +42,7 @@ export function SceneHistoryScreen({
   sceneFields,
   onNewObservation,
   onSelectObservation,
+  onOpenSeries,
 }: SceneHistoryScreenProps) {
   const sortedObservations = [...observations].sort(
     (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
@@ -61,10 +63,18 @@ export function SceneHistoryScreen({
           </Text>
         </View>
 
-        <Pressable style={styles.primaryButton} onPress={onNewObservation}>
-          <Plus size={18} strokeWidth={2.2} color="#fff" />
-          <Text style={styles.primaryButtonText}>New Observation</Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          {sceneFields.length >= 2 ? (
+            <Pressable style={styles.secondaryButton} onPress={onOpenSeries}>
+              <BarChart3 size={17} strokeWidth={2} color="#444" />
+              <Text style={styles.secondaryButtonText}>Series</Text>
+            </Pressable>
+          ) : null}
+          <Pressable style={styles.primaryButton} onPress={onNewObservation}>
+            <Plus size={18} strokeWidth={2.2} color="#fff" />
+            <Text style={styles.primaryButtonText}>New Observation</Text>
+          </Pressable>
+        </View>
       </View>
 
       {sortedObservations.length === 0 ? (
@@ -208,6 +218,27 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 13,
     color: "#777",
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  secondaryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#D5D8DC",
+    backgroundColor: "#fff",
+  },
+  secondaryButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#444",
   },
   primaryButton: {
     flexDirection: "row",

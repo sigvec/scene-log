@@ -253,3 +253,8 @@ SceneLog's goals are to demonstrate:
 <p align="center">
   <img src="screenshots/MeasurementCapture.jpg" width="350">
 </p>
+
+
+### v0.6 — Data series
+
+Scene history now provides a data-series workflow. Select two Scene expected fields as X and Y axes to preview the extracted series across observations. The series extraction layer handles unit normalization and explicitly reports observations excluded because values are missing, ambiguous, or incompatible. Plotting is intentionally deferred to a later increment.

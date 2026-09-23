@@ -33,6 +33,7 @@ import {
 } from "./src/services/storage/imageStorage";
 import { ObservationReviewScreen } from "./src/screens/ObservationReviewScreen";
 import { SceneHistoryScreen } from "./src/screens/SceneHistoryScreen";
+import { SeriesSelectionScreen } from "./src/screens/SeriesSelectionScreen";
 import type { Template } from "./src/domain/template/Template";
 import type { TemplateField } from "./src/domain/template/TemplateField";
 import { createTemplate } from "./src/domain/template/createTemplate";
@@ -58,7 +59,7 @@ import { SceneListScreen } from "./src/screens/SceneListScreen";
 import { ProjectEditorScreen } from "./src/screens/ProjectEditorScreen";
 import { SceneEditorScreen } from "./src/screens/SceneEditorScreen";
 
-type AppScreen = "projects" | "scenes" | "observations" | "templates" | "templateEditor" | "projectEditor" | "sceneEditor";
+type AppScreen = "projects" | "scenes" | "observations" | "series" | "templates" | "templateEditor" | "projectEditor" | "sceneEditor";
 
 function parseNumericValueFromOcr(text: string): string {
   const match = text.match(/[-+]?(?:\d+(?:\.\d*)?|\.\d+)/);
@@ -142,6 +143,8 @@ export default function App() {
   const [observations, setObservations] = useState<Observation[]>([]);
   const [activeObservation, setActiveObservation] =
     useState<Observation | null>(null);
+  const [seriesXSceneFieldId, setSeriesXSceneFieldId] = useState<string | null>(null);
+  const [seriesYSceneFieldId, setSeriesYSceneFieldId] = useState<string | null>(null);
   const [capturedImageUri, setCapturedImageUri] = useState<string | null>(null);
 
   const [imageSize, setImageSize] = useState<{
@@ -1163,6 +1166,20 @@ export default function App() {
           />
         )}
 
+        {currentScreen === "series" && activeScene &&
+          !activeObservation &&
+          !reviewObservation && (
+            <SeriesSelectionScreen
+              observations={observations.filter((observation) => observation.sceneId === activeScene.id)}
+              sceneFields={activeScene.observationFields}
+              xSceneFieldId={seriesXSceneFieldId}
+              ySceneFieldId={seriesYSceneFieldId}
+              onXChange={setSeriesXSceneFieldId}
+              onYChange={setSeriesYSceneFieldId}
+              onBack={() => setCurrentScreen("observations")}
+            />
+          )}
+
         {currentScreen === "templates" &&
           !activeObservation &&
           !reviewObservation && (
@@ -1257,6 +1274,11 @@ export default function App() {
                 sceneFields={activeScene.observationFields}
                 onNewObservation={handleNewObservation}
                 onSelectObservation={setReviewObservation}
+                onOpenSeries={() => {
+                  setSeriesXSceneFieldId(activeScene.observationFields[0]?.id ?? null);
+                  setSeriesYSceneFieldId(activeScene.observationFields[1]?.id ?? null);
+                  setCurrentScreen("series");
+                }}
               />
             </>
           )}
