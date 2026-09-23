@@ -147,11 +147,13 @@ Temperature      → Temperature / °C
 
 When a user records an individual field capture through an expected value, the resulting FieldValue retains that expected-value identity. A Capture Template can also be used within a Scene: each template field can be assigned to a compatible Scene expected value, or left unassigned when it is not part of the Scene's expected data series. Unique field matches and matching labels are suggested automatically, while ambiguous matches remain under user control. This provides a foundation for identifying corresponding values across observations while still allowing observations to contain arbitrary additional values.
 
-## History
+## History and data series
 
 The Scene history view presents observations in reverse chronological order. Scene-defined expected observation values are shown as consistent roles for each observation, with missing values displayed explicitly rather than treated as errors. Values that are not associated with an expected Scene value remain visible as additional measurements.
 
-This history view is the first layer of the v0.6 analysis workflow. The same Scene expected-value identities will provide the stable relationships needed for later series selection and plotting.
+The v0.6 history layer also provides data-series extraction. Two Scene expected values can be selected as X and Y roles, and SceneLog derives chronological points across the observations. Values are normalized to the units defined by the selected Scene fields where conversion is supported.
+
+An observation is included only when it has exactly one usable value for each selected role. Observations with missing values, multiple values for a role, incompatible value types, or incompatible units are reported as skipped rather than silently guessed or collapsed. This keeps the analysis data explicit and gives the future plotting layer a clean input structure.
 
 ## Technology
 
